@@ -1,0 +1,29 @@
+﻿@namespace BootstrapBlazor.Components
+
+<div @ref="Element">
+
+    <h5> @Status</h5>
+
+    <p id="status">OpenCV is loading...</p>
+    <div class="row g-3">
+        <div class="inputoutput col-12 col-sm-6">
+            <img id="imageSrc" alt="No Image" style="height:300px;" />
+            <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+        </div>
+        <div class="inputoutput col-12 col-sm-6">
+            <canvas id="canvasOutput" style="height: 300px;"></canvas>
+            <div class="caption">canvasOutput</div>
+        </div>
+        @if (IsOpenCVReady)
+        {
+            <div class="col-12 mt-3">
+                <Button Text="灰度化" OnClickWithoutRender="灰度化" />
+                <Button Text="边缘检测" OnClickWithoutRender="边缘检测" />
+                <Button Text="特征点检测" OnClickWithoutRender="特征点检测" />
+            </div>
+            <div class="col-12 mt-3">
+                <Select @bind-Value="Options.Type" ShowLabel="true" />
+            </div>
+        }
+    </div>
+</div>
