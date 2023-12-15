@@ -8,11 +8,9 @@
     <div class="row g-3">
         <div class="caption">选择图片<input type="file" id="fileInput" name="file" accept="image/*" capture /></div>
         <div class="inputoutput col-12 col-sm-6">
-            <canvas id="canvasOutput"  style="max-width: 300px; max-height: 300px "/>
-        </div>
-        <div class="inputoutput col-12 col-sm-6">
-            <canvas id="imageSrc" width="400" height="400"></canvas>
-            @*<canvas id="imageSrc" />*@
+            <canvas id="canvasOutput" />
+            <canvas id="preview" width="300" height="300"/>
+            <canvas id="imageSrc" width="400" height="400" style="display:none"/>
         </div>
         @if (IsOpenCVReady)
         {

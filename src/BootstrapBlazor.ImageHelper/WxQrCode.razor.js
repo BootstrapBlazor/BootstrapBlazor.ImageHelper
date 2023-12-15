@@ -43,6 +43,7 @@ export function addScript(url) {
 }
 
 export function init(instance, element, imageDataDom, canvasDom) {
+    let preview = element.querySelector('#preview');
     let inCanvas = element.querySelector('#' + imageDataDom);
     let outCanvas = element.querySelector('#' + canvasDom);
     let inputElement = element.querySelector('#fileInput');
@@ -53,11 +54,14 @@ export function init(instance, element, imageDataDom, canvasDom) {
 
     img.onload = function () {
         outCanvas.width = 0;
-        let inCanvasCtx = inCanvas.getContext('2d')
-        inCanvasCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 400, 400);
-        //let mat = cv.imread(img);
-        //cv.imshow(imageDataDom, mat);
-        //mat.delete();
+        let previewCtx = preview.getContext('2d')
+        previewCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 300, 300);
+        //变形的拉伸才能用
+        //let inCanvasCtx = inCanvas.getContext('2d')
+        //inCanvasCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 400, 400);
+        let mat = cv.imread(img);
+        cv.imshow(imageDataDom, mat);
+        mat.delete();
         wechatQrcode(instance, element, imageDataDom, canvasDom);
     };
 
