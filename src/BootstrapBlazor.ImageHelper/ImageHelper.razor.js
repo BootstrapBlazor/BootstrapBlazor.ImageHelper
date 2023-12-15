@@ -22,6 +22,21 @@ export function addScript(url) {
     let script = document.createElement('script');
     script.src = url;
     script.defer = true;
+    script.addEventListener("load", async () => {
+        if (cv.getBuildInformation) {
+            console.log(cv.getBuildInformation()); 
+        } else {
+            // WASM
+            if (cv instanceof Promise) {
+                cv = await cv;
+                console.log(cv.getBuildInformation()); 
+            } else {
+                cv["onRuntimeInitialized"] = () => {
+                    console.log(cv.getBuildInformation()); 
+                };
+            }
+        }
+    });
     document.head.appendChild(script);
     return false;
 }
@@ -366,7 +381,7 @@ export function faceDetection(instance, element, imageDataDom, canvasDom) {
     // 加载人脸检测模型
     faceCascade.load('haarcascade_frontalface_default.xml');
     eyeCascade.load('haarcascade_eye.xml');
-    let msize = new cv.Size(0, 0); 
+    let msize = new cv.Size(0, 0);
     // 人脸检测
     faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
     for (let i = 0; i < faces.size(); ++i) {
@@ -554,4 +569,4 @@ export function faceDetection1st(instance, element, imageDataDom, canvasDom) {
 //    cv.imshow(canvasDom, dst);
 //    src.delete();
 //    dst.delete()
-//}
+//} 
