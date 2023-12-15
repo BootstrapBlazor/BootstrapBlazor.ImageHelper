@@ -1,0 +1,24 @@
+﻿@namespace BootstrapBlazor.Components
+
+<div @ref="Element">
+
+    <pre> @Status</pre>
+    <pre> @Message</pre>
+
+    <div class="row g-3">
+        <div class="caption">选择图片<input type="file" id="fileInput" name="file" accept="image/*" capture /></div>
+        <div class="inputoutput col-12 col-sm-6">
+            <canvas id="canvasOutput"  style="max-width: 300px; max-height: 300px "/>
+        </div>
+        <div class="inputoutput col-12 col-sm-6">
+            <canvas id="imageSrc" width="400" height="400"></canvas>
+            @*<canvas id="imageSrc" />*@
+        </div>
+        @if (IsOpenCVReady)
+        {
+            <div class="col-12 mt-3">
+                <Button Text="微信扫码" OnClickWithoutRender="Apply" />
+            </div>
+        }
+    </div>
+</div>

@@ -88,6 +88,12 @@ public enum EnumImageHelperFunc
     /// 增强现实
     /// </summary>
     [Description("增强现实")]
-    AugmentedReality
+    AugmentedReality,
+
+    ///// <summary>
+    ///// 微信扫码
+    ///// </summary>
+    //[Description("微信扫码")]
+    //WechatQrcode,
 }
 

@@ -1,4 +1,5 @@
 # Blazor ImageHelper 图像助手 组件  
+# Blazor WxQrCode 微信扫码 组件
 
 基于[OpenCV](https://opencv.org)的Blazor组件
 
@@ -22,6 +23,7 @@ https://blazor.app1.es/ImageHelpers
 3.razor页面
 ```
 <ImageHelper />
+<WxQrCode />
  
 ```
 
