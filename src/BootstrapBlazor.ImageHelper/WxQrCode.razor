@@ -6,17 +6,18 @@
     <pre> @Message</pre>
 
     <div class="row g-3">
-        <div class="caption">选择图片<input type="file" id="fileInput" name="file" accept="image/*" capture /></div>
-        <div class="inputoutput col-12 col-sm-6">
-            <canvas id="canvasOutput" />
-            <canvas id="preview" width="300" height="300"/>
-            <canvas id="imageSrc" width="400" height="400" style="display:none"/>
+        <div>
+            <label class="btn btn-primary" for="fileInput">上传图片</label><input type="file" class="sr-only" id="fileInput" name="file" accept="image/*" capture />
+            @if (IsOpenCVReady)
+            { 
+                <Button Text="重试解码" OnClickWithoutRender="Apply" /> 
+            }
         </div>
-        @if (IsOpenCVReady)
-        {
-            <div class="col-12 mt-3">
-                <Button Text="微信扫码" OnClickWithoutRender="Apply" />
-            </div>
-        }
+        @*<div class="input-label">选择图片<input type="file" class="sr-only" id="fileInput" name="file" accept="image/*" multiple /></div>*@
+        <div class="inputoutput col-12 col-sm-6">
+            <canvas id="canvasOutput" style="max-width:200px;max-height:200px;" />
+            <canvas id="preview" width="300" height="300" />
+            <canvas id="imageSrc" width="400" height="400" style="display:none" />
+        </div>
     </div>
 </div>

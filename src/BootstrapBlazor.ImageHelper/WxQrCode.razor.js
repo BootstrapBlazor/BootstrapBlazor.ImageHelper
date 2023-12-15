@@ -53,6 +53,7 @@ export function init(instance, element, imageDataDom, canvasDom) {
     }, false);
 
     img.onload = function () {
+        outCanvas.height = 0;
         outCanvas.width = 0;
         let previewCtx = preview.getContext('2d')
         previewCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 300, 300);
