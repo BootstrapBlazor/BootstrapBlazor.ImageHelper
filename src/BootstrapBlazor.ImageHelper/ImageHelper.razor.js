@@ -336,7 +336,7 @@ function faceDetectionBase(instance, element, imageDataDom, canvasDom, type) {
     if (!isLoadImage()) return;
     if (loading) {
         let utils = new Utils('errorMessage');
-        let baseurl = '_content/BootstrapBlazor.ImageHelper/';
+        let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
         let eyeCascadeFile = 'haarcascade_eye.xml';
         utils.createFileFromUrl(eyeCascadeFile, baseurl + eyeCascadeFile, () => {
             let faceCascadeFile = 'haarcascade_frontalface_default.xml';
