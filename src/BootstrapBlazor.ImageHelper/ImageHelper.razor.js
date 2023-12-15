@@ -38,7 +38,7 @@ export function init(instance, element, options, imageDataDom, canvasDom) {
     let inputElement = element.querySelector('#fileInput');
 
     inputElement.addEventListener('change', (e) => {
-       img.src = URL.createObjectURL(e.target.files[0]);
+        img.src = URL.createObjectURL(e.target.files[0]);
     }, false);
 
     img.onload = function () {
@@ -332,55 +332,69 @@ function onOpenUtilsReady() {
         });
     });
 }
-function faceDetectionBase(instance, element, imageDataDom, canvasDom,type) {
+function faceDetectionBase(instance, element, imageDataDom, canvasDom, type) {
     if (!isLoadImage()) return;
     if (loading) {
         let utils = new Utils('errorMessage');
-        let faceCascadeFile = '_content/BootstrapBlazor.ImageHelper/haarcascade_frontalface_default.xml';
-        utils.createFileFromUrl('haarcascade_frontalface_default.xml', faceCascadeFile, () => {
-            loading = false;
-            instance.invokeMethodAsync('GetResult', '加载模型文件完成');
-            if (type === 1)
-                faceDetection(instance, element, imageDataDom, canvasDom);
-            else
-                faceDetection1st(instance, element, imageDataDom, canvasDom); 
+        let baseurl = '_content/BootstrapBlazor.ImageHelper/';
+        let eyeCascadeFile = 'haarcascade_eye.xml';
+        utils.createFileFromUrl(eyeCascadeFile, baseurl + eyeCascadeFile, () => {
+            let faceCascadeFile = 'haarcascade_frontalface_default.xml';
+            utils.createFileFromUrl(faceCascadeFile, baseurl + faceCascadeFile, () => {
+                loading = false;
+                instance.invokeMethodAsync('GetResult', '加载模型文件完成');
+                if (type === 1)
+                    faceDetection(instance, element, imageDataDom, canvasDom);
+                else
+                    faceDetection1st(instance, element, imageDataDom, canvasDom);
+            });
         });
         return instance.invokeMethodAsync('GetResult', '正在加载模型文件');
     }
 }
 export function faceDetection(instance, element, imageDataDom, canvasDom) {
-    faceDetectionBase(instance, element, imageDataDom, canvasDom,1);
+    faceDetectionBase(instance, element, imageDataDom, canvasDom, 1);
     let imageData = element.querySelector('#' + imageDataDom);
     let src = cv.imread(imageData);
     let gray = new cv.Mat();
     // 灰度化
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-
-    var classifier = new cv.CascadeClassifier();
+    let faces = new cv.RectVector();
+    let eyes = new cv.RectVector();
+    let faceCascade = new cv.CascadeClassifier();
+    let eyeCascade = new cv.CascadeClassifier();
     // 加载人脸检测模型
-    classifier.load('haarcascade_frontalface_default.xml');
+    faceCascade.load('haarcascade_frontalface_default.xml');
+    eyeCascade.load('haarcascade_eye.xml');
+    let msize = new cv.Size(0, 0); 
     // 人脸检测
-    var faces = new cv.RectVector();
-    classifier.detectMultiScale(src, faces, 1.1, 3, 0);
-
+    faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, msize, msize);
     for (let i = 0; i < faces.size(); ++i) {
-        let face = faces.get(i);
-        let point1 = new cv.Point(face.x, face.y);
-        let point2 = new cv.Point(face.x + face.width, face.y + face.height);
+        let roiGray = gray.roi(faces.get(i));
+        let roiSrc = src.roi(faces.get(i));
+        let point1 = new cv.Point(faces.get(i).x, faces.get(i).y);
+        let point2 = new cv.Point(faces.get(i).x + faces.get(i).width,
+            faces.get(i).y + faces.get(i).height);
         cv.rectangle(src, point1, point2, [255, 0, 0, 255]);
+        // detect eyes in face ROI
+        eyeCascade.detectMultiScale(roiGray, eyes);
+        for (let j = 0; j < eyes.size(); ++j) {
+            let point1 = new cv.Point(eyes.get(j).x, eyes.get(j).y);
+            let point2 = new cv.Point(eyes.get(j).x + eyes.get(j).width,
+                eyes.get(j).y + eyes.get(j).height);
+            cv.rectangle(roiSrc, point1, point2, [0, 0, 255, 255]);
+        }
+        roiGray.delete(); roiSrc.delete();
     }
-
-    cv.imshow(canvasDom, src);
-    src.delete();
-    gray.delete()
-    classifier.delete();
-    faces.delete();
+    cv.imshow('canvasOutput', src);
+    src.delete(); gray.delete(); faceCascade.delete();
+    eyeCascade.delete(); faces.delete(); eyes.delete();
 }
 
-export function faceDetection1st(instance, element, imageDataDom, canvasDom) { 
-    faceDetectionBase(instance, element, imageDataDom, canvasDom, 2); 
+export function faceDetection1st(instance, element, imageDataDom, canvasDom) {
+    faceDetectionBase(instance, element, imageDataDom, canvasDom, 2);
     let imageData = element.querySelector('#' + imageDataDom);
-    let src = cv.imread(imageData); 
+    let src = cv.imread(imageData);
     let gray = new cv.Mat();
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
     let faces = new cv.RectVector();
