@@ -21,6 +21,7 @@ https://blazor.app1.es/ImageHelpers
 
 3.razor页面
 ```
+<ImageHelper />
  
 ```
 
