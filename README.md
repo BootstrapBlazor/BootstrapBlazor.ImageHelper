@@ -42,6 +42,13 @@ opencv.js是opencv利用了emscripten将原本的C++版本编译成了WebAssembl
 
 2. 形状/轮廓的检测 https://oceanbloom.github.io/2021/10/12/%E3%80%90OpenCV%E5%85%A5%E9%97%A8%E3%80%91%E5%BD%A2%E7%8A%B6-%E8%BD%AE%E5%BB%93%E7%9A%84%E6%A3%80%E6%B5%8B/
 
+3. 图像处理 https://docs.opencv.org/4.x/d2/df0/tutorial_js_table_of_contents_imgproc.html
+
+4. 视频分析 https://docs.opencv.org/4.x/de/db6/tutorial_js_table_of_contents_video.html
+
+5. 物体检测 https://docs.opencv.org/4.x/dc/d73/tutorial_js_table_of_contents_objdetect.html
+
+6. 深度神经网络 https://docs.opencv.org/4.x/d0/db7/tutorial_js_table_of_contents_dnn.html
 
 #### 更新历史
 
