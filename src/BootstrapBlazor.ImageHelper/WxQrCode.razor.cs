@@ -81,7 +81,7 @@ public partial class WxQrCode : IAsyncDisposable
     }
 
     //452 可以画框, 455没编译画框
-    public async Task<bool> AddScript() => await Module!.InvokeAsync<bool>("addScript", "/_content/BootstrapBlazor.ImageHelper/qr/opencv_old.js");
+    public async Task<bool> AddScript() => await Module!.InvokeAsync<bool>("addScript", "/_content/BootstrapBlazor.ImageHelper/qr/opencv.js");
 
     protected override async Task OnParametersSetAsync()
     {
