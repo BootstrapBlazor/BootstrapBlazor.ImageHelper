@@ -16,11 +16,11 @@ namespace BootstrapBlazor.Components;
 public class ImageHelperOption
 {
     /// <summary>
-    /// 类型
+    /// 功能
     /// </summary>
-    [DisplayName("类型")]
+    [DisplayName("功能")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EnumImageType Type { get; set; } 
+    public EnumImageHelperFunc Type { get; set; } 
 
     /// <summary>
     /// 条码值 / Barcode value

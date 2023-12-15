@@ -29,6 +29,18 @@ https://blazor.app1.es/ImageHelpers
 |  类型   |  参数   | 说明  | 默认值  | 
 |  ----  |  ----  | ----  | ----  | 
  
+#### 介绍
+
+opencv.js是opencv利用了emscripten将原本的C++版本编译成了WebAssembly，让js可以直接调用C++版本的opencv方法
+
+<p>这是c++的库转wasm(运行在客户端) ,当然ssr也能用, 语法全部用opencv的c++版本, 由于本人精力有限, 不能一一封装所有的功能, 欢迎有兴趣的小伙伴一起<a href="https://github.com/densen2014/BootstrapBlazor.ImageHelper">[参与项目]</a></p>
+
+参考资料:
+
+1. 人脸识别 https://docs.opencv.org/4.x/d2/d99/tutorial_js_face_detection.html
+
+2. 形状/轮廓的检测 https://oceanbloom.github.io/2021/10/12/%E3%80%90OpenCV%E5%85%A5%E9%97%A8%E3%80%91%E5%BD%A2%E7%8A%B6-%E8%BD%AE%E5%BB%93%E7%9A%84%E6%A3%80%E6%B5%8B/
+
 
 #### 更新历史
 

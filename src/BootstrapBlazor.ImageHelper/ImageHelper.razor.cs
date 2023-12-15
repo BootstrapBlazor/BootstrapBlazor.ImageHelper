@@ -7,6 +7,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http;
 
 namespace BootstrapBlazor.Components;
 
@@ -18,6 +19,10 @@ public partial class ImageHelper : IAsyncDisposable
     [Inject]
     [NotNull]
     private IJSRuntime? JSRuntime { get; set; }
+
+    [Inject]
+    [NotNull]
+    private HttpClient? HttpClient  { get; set; }
 
     private IJSObjectReference? Module { get; set; }
     private DotNetObjectReference<ImageHelper>? Instance { get; set; }
@@ -43,7 +48,8 @@ public partial class ImageHelper : IAsyncDisposable
     public Func<string, Task>? OnError { get; set; }
 
     private bool IsOpenCVReady { get; set; }
-    private string Status => IsOpenCVReady ? "OpenCV is ready" : "OpenCV is loading...";
+    private string Status => IsOpenCVReady ? "初始化完成" : "正在初始化...";
+    private string? Message { get; set; } 
 
     private bool FirstRender { get; set; } = true;
 
@@ -58,22 +64,27 @@ public partial class ImageHelper : IAsyncDisposable
             {
                 await Task.Delay(500);
             }
-            FirstRender = false;
             await Init();
+            FirstRender = false;
+
+            //var imageBytes = await HttpClient.GetByteArrayAsync("https://localhost:5011/_content/BootstrapBlazor.ImageHelper/opencv.jpg");
 
         }
         catch (Exception e)
         {
+            Message=e.Message;
+            StateHasChanged();
             if (OnError != null) await OnError.Invoke(e.Message);
         }
 
     }
+
     public async Task<bool> AddScript() => await Module!.InvokeAsync<bool>("addScript", "/_content/BootstrapBlazor.ImageHelper/opencv.js");
 
     protected override async Task OnParametersSetAsync()
     {
         if (FirstRender) return;
-        await Init();
+        await Apply();
     }
 
     [JSInvokable]
@@ -104,12 +115,14 @@ public partial class ImageHelper : IAsyncDisposable
 
         try
         {
-            IsOpenCVReady = await Module!.InvokeAsync<bool>("init", Instance, Element, Options, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("init", Instance, Element, Options, ImageDataDom, CanvasDom);
             if (OnResult != null)
                 await OnResult.Invoke(Status);
         }
         catch (Exception ex)
         {
+            Message = ex.Message;
+            StateHasChanged();
             System.Console.WriteLine(ex.Message);
         }
         return IsOpenCVReady;
@@ -119,36 +132,66 @@ public partial class ImageHelper : IAsyncDisposable
     public string ImageDataDom { get; set; } = "imageSrc";
 
     [Parameter]
+    public ElementReference CanvasElement{ get; set; } 
+
+    [Parameter]
     public string CanvasDom { get; set; } = "canvasOutput";
 
+    private async Task OnChanged(SelectedItem item)
+    {
+       await Apply();
+    }
 
-    public virtual async Task 灰度化()
+    public virtual async Task Apply(EnumImageHelperFunc func)
+    {
+        Options.Type = func;
+        await Apply();
+    }
+
+    public virtual async Task Apply()
+    {
+        if (FirstRender || Options.Type== EnumImageHelperFunc.None) return;
+        Message =string.Empty;
+        try
+        {
+            var func = Options.Type.ToString().Substring(0,1).ToLower()+ Options.Type.ToString().Substring(1);
+            await Module!.InvokeVoidAsync(func, Instance, Element, ImageDataDom, CanvasDom);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            StateHasChanged();
+            System.Console.WriteLine(ex.Message);
+        }
+    }
+
+    public virtual async Task Grayscale()
     {
         try
         {
-            await Module!.InvokeVoidAsync("imgProcess1", Instance, Element, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("grayscale", Instance, Element, ImageDataDom, CanvasDom);
         }
         catch
         {
         }
     }
 
-    public virtual async Task 边缘检测()
+    public virtual async Task EdgeDetection()
     {
         try
         {
-            await Module!.InvokeVoidAsync("imgProcess2", Instance, Element, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("edgeDetection", Instance, Element, ImageDataDom, CanvasDom);
         }
         catch
         {
         }
     }
 
-    public virtual async Task 特征点检测()
+    public virtual async Task FeaturePointDetection()
     {
         try
         {
-            await Module!.InvokeVoidAsync("imgProcess3", Instance, Element, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("featurePointDetection", Instance, Element, ImageDataDom, CanvasDom);
         }
         catch
         {
@@ -156,10 +199,13 @@ public partial class ImageHelper : IAsyncDisposable
     }
 
     [JSInvokable]
-    public async Task GetResult(string err)
+    public async Task GetResult(string msg)
     {
+        Message = msg;
+        StateHasChanged();
+        System.Console.WriteLine(msg);
         if (OnResult != null)
-            await OnResult.Invoke(err);
+            await OnResult.Invoke(msg);
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()

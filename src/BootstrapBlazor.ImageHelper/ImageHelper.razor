@@ -3,26 +3,28 @@
 <div @ref="Element">
 
     <h5> @Status</h5>
+    <b> @Message</b>
 
-    <p id="status">OpenCV is loading...</p>
     <div class="row g-3">
         <div class="inputoutput col-12 col-sm-6">
-            <img id="imageSrc" alt="No Image" style="height:300px;" />
-            <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+            <canvas id="imageSrc" width="400" height="400"></canvas>
+            <div class="caption">选择图片 <input type="file" id="fileInput" name="file" /></div>
         </div>
         <div class="inputoutput col-12 col-sm-6">
-            <canvas id="canvasOutput" style="height: 300px;"></canvas>
-            <div class="caption">canvasOutput</div>
+            <canvas id="canvasOutput" width="400" height="400"></canvas>
+            <div class="caption">输出</div>
         </div>
         @if (IsOpenCVReady)
         {
             <div class="col-12 mt-3">
-                <Button Text="灰度化" OnClickWithoutRender="灰度化" />
-                <Button Text="边缘检测" OnClickWithoutRender="边缘检测" />
-                <Button Text="特征点检测" OnClickWithoutRender="特征点检测" />
+                <Button Text="灰度化" OnClickWithoutRender="(()=>Apply(EnumImageHelperFunc.Grayscale))" />
+                <Button Text="边缘检测" OnClickWithoutRender="(()=>Apply(EnumImageHelperFunc.EdgeDetection))" />
+                <Button Text="特征点检测" OnClickWithoutRender="(()=>Apply(EnumImageHelperFunc.FeaturePointDetection))" />
+                <Button Text="人脸检测" OnClickWithoutRender="(()=>Apply(EnumImageHelperFunc.FaceDetection))" />
+                <Button Text="第一张脸" OnClickWithoutRender="(()=>Apply(EnumImageHelperFunc.FaceDetection1st))" />
             </div>
             <div class="col-12 mt-3">
-                <Select @bind-Value="Options.Type" ShowLabel="true" />
+                <Select @bind-Value="Options.Type" ShowLabel="true" OnSelectedItemChanged="OnChanged" />
             </div>
         }
     </div>
