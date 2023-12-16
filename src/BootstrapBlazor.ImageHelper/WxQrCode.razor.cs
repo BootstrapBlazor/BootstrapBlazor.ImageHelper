@@ -63,10 +63,10 @@ public partial class WxQrCode : IAsyncDisposable
             if (!firstRender) return;
             Instance = DotNetObjectReference.Create(this);
             Module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BootstrapBlazor.ImageHelper/WxQrCode.razor.js" + "?v=" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
-            while (!await AddScript())
-            {
-                await Task.Delay(500);
-            }
+            //while (!await AddScript())
+            //{
+            //    await Task.Delay(500);
+            //}
             await Init();
             FirstRender = false;
 
@@ -115,7 +115,7 @@ public partial class WxQrCode : IAsyncDisposable
 
         try
         {
-            await Module!.InvokeVoidAsync("init", Instance, Element, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("init", Instance, Element, ImageDataDom, CanvasDom, "/_content/BootstrapBlazor.ImageHelper/qr/opencv452.js");
             if (OnResult != null)
                 await OnResult.Invoke(Status);
         }
@@ -149,7 +149,23 @@ public partial class WxQrCode : IAsyncDisposable
         Message =string.Empty;
         try
         {
-            await Module!.InvokeVoidAsync("wechatQrcode", Instance, Element, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("wechatQrcode452", Instance, Element, ImageDataDom, CanvasDom);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            StateHasChanged();
+            System.Console.WriteLine(ex.Message);
+        }
+    }
+
+    public virtual async Task Scan()
+    {
+        if (FirstRender) return;
+        Message =string.Empty;
+        try
+        {
+            await Module!.InvokeVoidAsync("wechatQrcodeCamera", Instance, Element, ImageDataDom, CanvasDom);
         }
         catch (Exception ex)
         {
