@@ -399,8 +399,8 @@ export function wechatQrcodeCamera(instance, element, _options) {
             }
             //res.delete()
             console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-            instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
             if (arr.length > 0) {
+                instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
                 vibrate();
                 const rects = []
                 let temp = dst
