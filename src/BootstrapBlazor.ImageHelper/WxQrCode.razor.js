@@ -313,57 +313,6 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     };
 };
 
-export function wechatQrcode(instance, element, _options) {
-    if (!isLoadImage()) return;
-
-    console.time("OpenCV耗时");
-    let imageData = element.querySelector('#' + _options.imageDataDom);
-    let inputImage = cv.imread(imageData, cv.IMREAD_GRAYSCALE);
-    let dst = new cv.Mat();
-    let points_vec = new cv.MatVector();
-    let res = qrcode_detector.detectAndDecode(inputImage, points_vec);
-    let i = 0
-    let arr = []
-    while (i < res.size()) {
-        arr.push(res.get(i++))
-    }
-    //res.delete()
-    console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-    instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-
-    //const rects = []
-    //let temp = inputImage
-    //for (let j = 0; j < points_vec.size(); j += 1) {
-    //    let points = points_vec.get(0);
-    //    let x = points.floatAt(0);
-    //    let y = points.floatAt(1);
-    //    let width = points.floatAt(4) - points.floatAt(0);
-    //    let height = points.floatAt(5) - points.floatAt(1);
-    //    let rect = new cv.Rect(x, y, width, height);
-    //    rects.push(rect)
-
-    //    let point1 = new cv.Point(rect.x, rect.y);
-    //    let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
-    //    //cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
-    //}
-    ////cv.imshow(_options.imageDataDom, temp)
-    //console.log(rects);
-
-    if (res.size() !== 0) {
-        let points = points_vec.get(0);
-        let x = points.floatAt(0);
-        let y = points.floatAt(1);
-        let width = points.floatAt(4) - points.floatAt(0);
-        let height = points.floatAt(5) - points.floatAt(1);
-        let rect = new cv.Rect(x, y, width, height);
-        dst = inputImage.roi(rect);
-        cv.imshow(_options.canvasDom, dst);
-    } else {
-        instance.invokeMethodAsync('GetResult', '未能识别');
-    }
-    console.timeEnd("OpenCV耗时");
-}
-
 export function wechatQrcode452(instance, element, _options) {
     if (!isLoadImage()) return;
 
