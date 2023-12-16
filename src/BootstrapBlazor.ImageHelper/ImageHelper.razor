@@ -14,7 +14,17 @@
             }
             else
             {
-                <video id="videoInput" width=320 height=240></video>
+                <video id="videoInput" width=320 height=240
+                       data-action="video" class="video"
+                       muted
+                       webkit-playsinline
+                       playsinline
+                       x-webkit-airplay="allow"
+                       x5-video-player-type="h5"
+                       x5-video-player-fullscreen="true"
+                       x5-video-orientation="portraint">
+                    Video stream not available.
+                </video>
             }
         </div>
         <div class="inputoutput col-12 col-sm-6">
