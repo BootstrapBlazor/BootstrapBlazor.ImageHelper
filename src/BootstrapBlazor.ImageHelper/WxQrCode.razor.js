@@ -35,10 +35,11 @@ export function addScript(url) {
 }
 
 export function init(instance, element, imageDataDom, canvasDom, url) {
-    let preview = element.querySelector('#preview');
     let inCanvas = element.querySelector('#' + imageDataDom);
     let outCanvas = element.querySelector('#' + canvasDom);
     let inputElement = element.querySelector('#fileInput');
+    outCanvas.height = 0;
+    outCanvas.width = 0;
 
     inputElement.addEventListener('change', (e) => {
         img.src = URL.createObjectURL(e.target.files[0]);
@@ -47,8 +48,6 @@ export function init(instance, element, imageDataDom, canvasDom, url) {
     img.onload = function () {
         outCanvas.height = 0;
         outCanvas.width = 0;
-        let previewCtx = preview.getContext('2d')
-        previewCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 300, 300);
         //变形的拉伸才能用
         //let inCanvasCtx = inCanvas.getContext('2d')
         //inCanvasCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 400, 400);
@@ -343,7 +342,6 @@ export function wechatQrcodeCamera(instance, element, imageDataDom, canvasDom) {
             cap.read(src);
             src.copyTo(dst);
             cv.cvtColor(dst, gray, cv.COLOR_RGBA2GRAY, 0);
-            //gray = cv.imread(dst, cv.IMREAD_GRAYSCALE);
             let res = qrcode_detector.detectAndDecode(gray, points_vec);
             let i = 0
             let arr = []
@@ -353,7 +351,18 @@ export function wechatQrcodeCamera(instance, element, imageDataDom, canvasDom) {
             //res.delete()
             console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
             instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-            // schedule the next one.
+            const rects = []
+            let temp = dst
+            for (let j = 0; j < points_vec.size(); j += 1) {
+                let rect = cv.boundingRect(points_vec.get(j))
+                rects.push(rect)
+
+                let point1 = new cv.Point(rect.x, rect.y);
+                let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+                cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
+            }
+            cv.imshow(imageDataDom, temp)
+           // schedule the next one.
             let delay = 1000 / FPS - (Date.now() - begin);
             setTimeout(processVideo, delay);
         } catch (err) {
