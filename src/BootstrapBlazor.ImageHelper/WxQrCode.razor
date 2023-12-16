@@ -4,6 +4,7 @@
 
     <pre> @Status</pre>
     <pre> @Message</pre>
+    <pre id="errorMessage"></pre>
 
     <div class="row g-3">
         <div>
@@ -12,23 +13,33 @@
             {
                 <Button Text="重试解码" OnClickWithoutRender="Apply" />
                 <Button Text="扫码" OnClickWithoutRender="Scan" />
+                <Button Id="startAndStop" Text="" />
             }
         </div>
         @*<div class="input-label">选择图片<input type="file" class="sr-only" id="fileInput" name="file" accept="image/*" multiple /></div>*@
-        <div class="inputoutput col-12 col-sm-6">
-            <canvas id="canvasOutput" style="max-width:200px;max-height:200px;" />
-            <canvas id="imageSrc" width="400" height="400" style="max-width:300px;max-height:700px;"  />
-            <video id="videoInput" width=320 height=240  
-                   data-action="video" class="video"
-                   muted
-                   webkit-playsinline
-                   playsinline
-                   x-webkit-airplay="allow"
-                   x5-video-player-type="h5"
-                   x5-video-player-fullscreen="true"
-                   x5-video-orientation="portraint">
-                Video stream not available.
-            </video>
+    <div class="inputoutput col-12 col-sm-6">
+        <canvas id="canvasOutput" style="max-width:200px;max-height:200px;" />
+        <canvas id="imageSrc" width="400" height="400" style="max-width:300px;max-height:700px;" />
+        <video id="videoInput" 
+               width=640 
+               height=480
+               data-action="video" 
+               class="video"
+               muted
+               webkit-playsinline
+               playsinline
+               x-webkit-airplay="allow"
+               x5-video-player-type="h5"
+               x5-video-player-fullscreen="true"
+               x5-video-orientation="portraint">
+            Video stream not available.
+        </video>
+        <div data-action="sourceSelectPanel" style="display:none">
+            <label for="sourceSelect">@SelectDeviceBtnTitle:</label>
+            <select data-action="sourceSelect" style="max-width:100%" class="form-select form-control">
+            </select>
         </div>
+
+    </div>
     </div>
 </div>

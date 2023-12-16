@@ -5,7 +5,9 @@
 // **********************************
 
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 
@@ -25,12 +27,16 @@ public partial class WxQrCode : IAsyncDisposable
     private HttpClient? HttpClient  { get; set; }
 
     private IJSObjectReference? Module { get; set; }
+
     private DotNetObjectReference<WxQrCode>? Instance { get; set; }
 
     /// <summary>
     /// UI界面元素的引用对象
     /// </summary>
     public ElementReference Element { get; set; }
+
+    [Parameter]
+    public ElementReference CanvasElement { get; set; }
 
     /// <summary>
     /// 条码生成(svg)回调方法/ Barcode generated(svg) callback method
@@ -56,17 +62,37 @@ public partial class WxQrCode : IAsyncDisposable
 
     private bool FirstRender { get; set; } = true;
 
+    [NotNull]
+    private StorageService? Storage { get; set; }
+
+    /// <summary>
+    /// 选择设备按钮文本/Select device button title
+    /// </summary>
+    [Parameter]
+    public string SelectDeviceBtnTitle { get; set; } = "选择设备";
+
+    /// <summary>
+    /// 选项
+    /// </summary>
+    [Parameter]
+    public WxQrCodeOption Options { get; set; }=new();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
             if (!firstRender) return;
-            Instance = DotNetObjectReference.Create(this);
+            Storage ??= new StorageService(JSRuntime);
             Module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BootstrapBlazor.ImageHelper/WxQrCode.razor.js" + "?v=" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
-            //while (!await AddScript())
-            //{
-            //    await Task.Delay(500);
-            //}
+            Instance = DotNetObjectReference.Create(this);
+            try
+            {
+                if (Options.SaveDeviceID)
+                    Options.DeviceID = await Storage.GetValue("CamsDeviceID", Options.DeviceID);
+            }
+            catch (Exception)
+            {
+            }
             await Init();
             FirstRender = false;
 
@@ -110,12 +136,12 @@ public partial class WxQrCode : IAsyncDisposable
     /// <param name="input"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    public async Task<bool> Init(string? input = null)
+    public async Task<bool> Init()
     {
 
         try
         {
-            await Module!.InvokeVoidAsync("init", Instance, Element, ImageDataDom, CanvasDom, "/_content/BootstrapBlazor.ImageHelper/qr/opencv452.js");
+            await Module!.InvokeVoidAsync("init", Instance, Element, Options);
             if (OnResult != null)
                 await OnResult.Invoke(Status);
         }
@@ -127,15 +153,6 @@ public partial class WxQrCode : IAsyncDisposable
         }
         return IsOpenCVReady;
     }
-
-    [Parameter]
-    public string ImageDataDom { get; set; } = "imageSrc";
-
-    [Parameter]
-    public ElementReference CanvasElement{ get; set; } 
-
-    [Parameter]
-    public string CanvasDom { get; set; } = "canvasOutput";
 
     private async Task OnChanged(SelectedItem item)
     {
@@ -149,7 +166,7 @@ public partial class WxQrCode : IAsyncDisposable
         Message =string.Empty;
         try
         {
-            await Module!.InvokeVoidAsync("wechatQrcode452", Instance, Element, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("wechatQrcode452", Instance, Element, Options);
         }
         catch (Exception ex)
         {
@@ -165,7 +182,7 @@ public partial class WxQrCode : IAsyncDisposable
         Message =string.Empty;
         try
         {
-            await Module!.InvokeVoidAsync("wechatQrcodeCamera", Instance, Element, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("wechatQrcodeCamera", Instance, Element, Options);
         }
         catch (Exception ex)
         {
@@ -185,6 +202,26 @@ public partial class WxQrCode : IAsyncDisposable
             await OnResult.Invoke(msg);
     }
 
+    /// <summary>
+    /// 选择摄像头回调方法
+    /// </summary>
+    /// <param name="base64encodedstring"></param>
+    /// <returns></returns>
+    [JSInvokable]
+    public async Task SelectDeviceID(string deviceID)
+    {
+        try
+        {
+            if (Options.SaveDeviceID)
+            {
+                await Storage.SetValue("CamsDeviceID", deviceID);
+            }
+        }
+        catch
+        {
+        }
+    }
+
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
         if (Module is not null)
@@ -193,5 +230,59 @@ public partial class WxQrCode : IAsyncDisposable
         }
         Instance?.Dispose();
     }
+
+    #region StorageService
+    private class StorageService
+    {
+        private readonly IJSRuntime JSRuntime;
+
+        public StorageService(IJSRuntime jsRuntime)
+        {
+            JSRuntime = jsRuntime;
+        }
+
+        public async Task SetValue<TValue>(string key, TValue value)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $"localStorage.setItem('{key}', '{value}')");
+        }
+
+        public async Task<TValue?> GetValue<TValue>(string key, TValue? def)
+        {
+            try
+            {
+                var cValue = await JSRuntime.InvokeAsync<TValue>("eval", $"localStorage.getItem('{key}');");
+                return cValue ?? def;
+            }
+            catch
+            {
+                var cValue = await JSRuntime.InvokeAsync<string>("eval", $"localStorage.getItem('{key}');");
+                if (cValue == null)
+                    return def;
+
+                var newValue = GetValueI<TValue>(cValue);
+                return newValue ?? def;
+
+            }
+        }
+
+        public static T? GetValueI<T>(string value)
+        {
+            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
+            if (converter != null)
+            {
+                return (T?)converter.ConvertFrom(value);
+            }
+            return default;
+            //return (T)Convert.ChangeType(value, typeof(T));
+        }
+
+        public async Task RemoveValue(string key)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $"localStorage.removeItem('{key}')");
+        }
+
+
+    }
+    #endregion
 
 }

@@ -1,6 +1,84 @@
 ﻿let loadingQr = true;
 let img = new Image();
 let qrcode_detector;
+let element = null;
+let instance = null;
+let options = null;
+let supportsVibrate = false;
+let timeIds = -1;
+
+export function init(_instance, _element, _options) {
+    options = _options;
+    instance = _instance;
+    element = _element;
+    supportsVibrate = "vibrate" in navigator;
+    let inCanvas = element.querySelector('#' + options.imageDataDom);
+    let outCanvas = element.querySelector('#' + options.canvasDom);
+    let inputElement = element.querySelector('#' + options.fileInputDom);
+    outCanvas.height = 0;
+    outCanvas.width = 0;
+
+    inputElement.addEventListener('change', (e) => {
+        img.src = URL.createObjectURL(e.target.files[0]);
+    }, false);
+
+    img.onload = function () {
+        outCanvas.height = 0;
+        outCanvas.width = 0;
+        //变形的拉伸才能用
+        //let inCanvasCtx = inCanvas.getContext('2d')
+        //inCanvasCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 400, 400);
+        let mat = cv.imread(img);
+        cv.imshow(options.imageDataDom, mat);
+        mat.delete();
+        wechatQrcode452(instance, element, _options);
+    };
+
+    addScript(options.openCvUrl).then(
+        () => {
+            if (loadingQr) {
+                let utils = new Utils(options.errorOutputDom);
+                let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
+                let mod = 'detect.caffemodel';
+                utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
+                    mod = 'detect.prototxt';
+                    utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
+                        mod = 'sr.caffemodel';
+                        utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
+                            mod = 'sr.prototxt';
+                            utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
+                                loadingQr = false;
+                                instance.invokeMethodAsync('GetResult', '加载模型文件完成');
+                                qrcode_detector = new cv.wechat_qrcode_WeChatQRCode(
+                                    "detect.prototxt",
+                                    "detect.caffemodel",
+                                    "sr.prototxt",
+                                    "sr.caffemodel"
+                                );
+                                //wechatQrcode(instance, element, imageDataDom, canvasDom);
+                            });
+                        });
+                    });
+                });
+                instance.invokeMethodAsync('GetResult', '正在加载模型文件');
+            }
+
+            function onOpenCvReady() {
+                instance.invokeMethodAsync('GetReady');
+            }
+
+            onOpenCvReady();
+        },
+        () => {
+            utils.printError("Failed to load " + options.url);
+        }
+    );
+
+}
+export function vibrate() {
+    if (supportsVibrate) navigator.vibrate(1000);
+}
+
 export function addScript(url) {
     return new Promise((resolve, reject) => {
         let script = document.createElement("script");
@@ -34,71 +112,6 @@ export function addScript(url) {
     });
 }
 
-export function init(instance, element, imageDataDom, canvasDom, url) {
-    let inCanvas = element.querySelector('#' + imageDataDom);
-    let outCanvas = element.querySelector('#' + canvasDom);
-    let inputElement = element.querySelector('#fileInput');
-    outCanvas.height = 0;
-    outCanvas.width = 0;
-
-    inputElement.addEventListener('change', (e) => {
-        img.src = URL.createObjectURL(e.target.files[0]);
-    }, false);
-
-    img.onload = function () {
-        outCanvas.height = 0;
-        outCanvas.width = 0;
-        //变形的拉伸才能用
-        //let inCanvasCtx = inCanvas.getContext('2d')
-        //inCanvasCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 400, 400);
-        let mat = cv.imread(img);
-        cv.imshow(imageDataDom, mat);
-        mat.delete();
-        wechatQrcode452(instance, element, imageDataDom, canvasDom);
-    };
-
-    addScript(url).then(
-        () => {
-            if (loadingQr) {
-                let utils = new Utils('errorMessage');
-                let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
-                let mod = 'detect.caffemodel';
-                utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                    mod = 'detect.prototxt';
-                    utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                        mod = 'sr.caffemodel';
-                        utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                            mod = 'sr.prototxt';
-                            utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                                loadingQr = false;
-                                instance.invokeMethodAsync('GetResult', '加载模型文件完成');
-                                qrcode_detector = new cv.wechat_qrcode_WeChatQRCode(
-                                    "detect.prototxt",
-                                    "detect.caffemodel",
-                                    "sr.prototxt",
-                                    "sr.caffemodel"
-                                );
-                                //wechatQrcode(instance, element, imageDataDom, canvasDom);
-                            });
-                        });
-                    });
-                });
-                instance.invokeMethodAsync('GetResult', '正在加载模型文件');
-            }
-
-            function onOpenCvReady() {
-                instance.invokeMethodAsync('GetReady');
-            }
-
-            onOpenCvReady();
-        },
-        () => {
-            utils.printError("Failed to load " + OPENCV_URL);
-        }
-    );
-
-}
-
 function isLoadImage() {
     if (!img.src) {
         alert('请先上传图片')
@@ -106,9 +119,14 @@ function isLoadImage() {
     }
     return true
 }
+
 export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     let self = this;
-    this.errorOutput = document.getElementById(errorOutputId);
+    let sourceSelect = null;
+    let sourceSelectPanel = null;
+    let selectedDeviceId = null;
+
+    this.errorOutput = element.querySelector('#' + errorOutputId);
 
     this.createFileFromUrl = function (path, url, callback) {
         let request = new XMLHttpRequest();
@@ -126,7 +144,7 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
             }
         };
         request.send();
-    }; 
+    };
 
     this.clearError = function () {
         this.errorOutput.innerHTML = '';
@@ -155,8 +173,8 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     };
 
     this.loadCode = function (scriptId, textAreaId) {
-        let scriptNode = document.getElementById(scriptId);
-        let textArea = document.getElementById(textAreaId);
+        let scriptNode = element.querySelector('#' + scriptId);
+        let textArea = element.querySelector('#' + textAreaId);
         if (scriptNode.type !== 'text/code-snippet') {
             throw Error('Unknown code snippet type');
         }
@@ -164,7 +182,7 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     };
 
     this.addFileInputHandler = function (fileInputId, canvasId) {
-        let inputElement = document.getElementById(fileInputId);
+        let inputElement = element.querySelector('#' + fileInputId);
         inputElement.addEventListener('change', (e) => {
             let files = e.target.files;
             if (files.length > 0) {
@@ -180,13 +198,14 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         }
     };
 
-    this.startCamera = function (resolution, callback, videoId) {
+    this.startCamera = function (resolution, callback, videoId, selectedDeviceId, changeCameraCallback) {
+        self.selectedDeviceId = selectedDeviceId;
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            const constraints = {
+            let constraints = {
                 'qvga': { width: { exact: 320 }, height: { exact: 240 } },
                 'vga': { width: { exact: 640 }, height: { exact: 480 } }
             };
-            let video = document.getElementById(videoId);
+            let video = element.querySelector('#' + videoId);
             if (!video) {
                 video = document.createElement('video');
             }
@@ -194,6 +213,18 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
             let videoConstraint = constraints[resolution];
             if (!videoConstraint) {
                 videoConstraint = true;
+            }
+            if (selectedDeviceId != null || options.deviceID != null) {
+                let deviceId = selectedDeviceId;
+                if (deviceId == null) deviceId = options.deviceID;
+                videoConstraint = {
+                    deviceId: deviceId ? { exact: deviceId } : undefined,
+                    width: { ideal: options.width },
+                    height: { ideal: options.height },
+                    facingMode: "environment",
+                    focusMode: "continuous"
+                }
+
             }
 
             navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false })
@@ -204,11 +235,70 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
                     self.stream = stream;
                     self.onCameraStartedCallback = callback;
                     video.addEventListener('canplay', onVideoCanPlay, false);
+
+                    self.listCameras(changeCameraCallback);
                 })
                 .catch(function (err) {
                     self.printError('Camera Error: ' + err.name + ' ' + err.message);
                 });
         }
+    };
+
+
+    this.listCameras = function (callback) {
+        if (selectedDeviceId != null) return;
+        navigator.mediaDevices.enumerateDevices()
+            .then((devices) => {
+                sourceSelect = element.querySelector('[data-action=' + options.sourceSelectDom + ']');
+                sourceSelectPanel = element.querySelector('[data-action=' + options.sourceSelectPanelDom + ']');
+                let videoInputDevices = [];
+                devices.forEach((device) => {
+                    if (device.kind === 'videoinput') {
+                        videoInputDevices.push(device);
+                    }
+                });
+                if (options.deviceID != null) {
+                    selectedDeviceId = options.deviceID
+                } else if (videoInputDevices.length > 1) {
+                    selectedDeviceId = videoInputDevices[1].deviceId
+                } else {
+                    selectedDeviceId = videoInputDevices[0].deviceId
+                }
+                if (videoInputDevices.length > 1) {
+                    sourceSelect.innerHTML = '';
+                    devices.forEach((device) => {
+                        if (device.kind === 'videoinput') {
+                            if (options.debug) console.log(`${device.label} id = ${device.deviceId}`);
+                            const sourceOption = document.createElement('option');
+                            if (device.label === '') {
+                                sourceOption.text = 'Camera' + (sourceSelect.length + 1);
+                            } else {
+                                sourceOption.text = device.label
+                            }
+                            sourceOption.value = device.deviceId
+                            if (selectedDeviceId != null && device.deviceId == selectedDeviceId) {
+                                sourceOption.selected = true;
+                            }
+                            sourceSelect.appendChild(sourceOption)
+                        }
+                    });
+
+                    sourceSelect.onchange = () => {
+                        selectedDeviceId = sourceSelect.value;
+                        if (options.debug) console.log(`selectedDevice: ${sourceSelect.options[sourceSelect.selectedIndex].text} id = ${sourceSelect.value}`);
+                        instance.invokeMethodAsync('SelectDeviceID', selectedDeviceId);
+                        callback(selectedDeviceId);
+                        //this.stopCamera();
+                        //this.startCamera(selectedDeviceId);
+                    }
+
+                    sourceSelectPanel.style.display = 'block'
+
+                }
+            })
+            .catch((err) => {
+                console.error(`${err.name}: ${err.message}`);
+            });
     };
 
     this.stopCamera = function () {
@@ -222,12 +312,12 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         }
     };
 };
- 
-export function wechatQrcode(instance, element, imageDataDom, canvasDom) {
+
+export function wechatQrcode(instance, element, _options) {
     if (!isLoadImage()) return;
 
     console.time("OpenCV耗时");
-    let imageData = element.querySelector('#' + imageDataDom);
+    let imageData = element.querySelector('#' + _options.imageDataDom);
     let inputImage = cv.imread(imageData, cv.IMREAD_GRAYSCALE);
     let dst = new cv.Mat();
     let points_vec = new cv.MatVector();
@@ -256,7 +346,7 @@ export function wechatQrcode(instance, element, imageDataDom, canvasDom) {
     //    let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
     //    //cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
     //}
-    ////cv.imshow(imageDataDom, temp)
+    ////cv.imshow(_options.imageDataDom, temp)
     //console.log(rects);
 
     if (res.size() !== 0) {
@@ -267,18 +357,18 @@ export function wechatQrcode(instance, element, imageDataDom, canvasDom) {
         let height = points.floatAt(5) - points.floatAt(1);
         let rect = new cv.Rect(x, y, width, height);
         dst = inputImage.roi(rect);
-        cv.imshow(canvasDom, dst);
+        cv.imshow(_options.canvasDom, dst);
     } else {
-        instance.invokeMethodAsync('GetResult', '未能识别'); 
+        instance.invokeMethodAsync('GetResult', '未能识别');
     }
     console.timeEnd("OpenCV耗时");
 }
 
-export function wechatQrcode452(instance, element, imageDataDom, canvasDom) {
+export function wechatQrcode452(instance, element, _options) {
     if (!isLoadImage()) return;
 
     console.time("OpenCV耗时");
-    let imageData = element.querySelector('#' + imageDataDom);
+    let imageData = element.querySelector('#' + _options.imageDataDom);
     let inputImage = cv.imread(imageData, cv.IMREAD_GRAYSCALE);
     let dst = new cv.Mat();
     let points_vec = new cv.MatVector();
@@ -302,22 +392,22 @@ export function wechatQrcode452(instance, element, imageDataDom, canvasDom) {
         let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
         cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
     }
-    cv.imshow(imageDataDom, temp)
+    cv.imshow(_options.imageDataDom, temp)
 
     console.timeEnd("OpenCV耗时");
 }
 
 
-export function wechatQrcodeCamera(instance, element, imageDataDom, canvasDom) {
-    let utils = new Utils('errorMessage');
+export function wechatQrcodeCamera(instance, element, _options) {
+    let utils = new Utils(_options.errorOutputDom);
 
     let streaming = false;
-    let videoInput = document.getElementById('videoInput');
-    let startAndStop = document.getElementById('startAndStop');
-    let canvasOutput = document.getElementById(canvasDom);
+    let videoInput = element.querySelector('#' + _options.videoInputDom);
+    let startAndStop = element.querySelector('#' + _options.startAndStopDom);
+    let canvasOutput = element.querySelector('#' + _options.canvasDom);
     let canvasContext = canvasOutput.getContext('2d');
 
-    let video = document.getElementById('videoInput');
+    let video = element.querySelector('#' + _options.videoInputDom);
     let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
     let dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
     let gray = new cv.Mat();
@@ -325,7 +415,18 @@ export function wechatQrcodeCamera(instance, element, imageDataDom, canvasDom) {
     let points_vec = new cv.MatVector();
     const FPS = 30;
 
-    utils.startCamera('qvga', onVideoStarted, 'videoInput');
+    utils.startCamera('vga', onVideoStarted, _options.videoInputDom, _options.deviceID, onChangeCamera);
+
+    startAndStop.addEventListener('click', () => {
+        if (!streaming) {
+            utils.clearError();
+            utils.startCamera('vga', onVideoStarted, _options.videoInputDom, _options.deviceID, onChangeCamera);
+        } else {
+            utils.stopCamera();
+            onVideoStopped();
+        }
+    });
+
     function processVideo() {
         try {
             if (!streaming) {
@@ -333,8 +434,7 @@ export function wechatQrcodeCamera(instance, element, imageDataDom, canvasDom) {
                 src.delete();
                 dst.delete();
                 gray.delete();
-                faces.delete();
-                faceCascade.delete();
+                qrcode_detector.delete(); 
                 return;
             }
             let begin = Date.now();
@@ -351,38 +451,47 @@ export function wechatQrcodeCamera(instance, element, imageDataDom, canvasDom) {
             //res.delete()
             console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
             instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-            const rects = []
-            let temp = dst
-            for (let j = 0; j < points_vec.size(); j += 1) {
-                let rect = cv.boundingRect(points_vec.get(j))
-                rects.push(rect)
+            if (arr.length > 0) {
+                vibrate();
+                const rects = []
+                let temp = dst
+                for (let j = 0; j < points_vec.size(); j += 1) {
+                    let rect = cv.boundingRect(points_vec.get(j))
+                    rects.push(rect)
 
-                let point1 = new cv.Point(rect.x, rect.y);
-                let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
-                cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
+                    let point1 = new cv.Point(rect.x, rect.y);
+                    let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+                    cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
+                }
+                cv.imshow(_options.imageDataDom, temp)
             }
-            cv.imshow(imageDataDom, temp)
-           // schedule the next one.
+            // schedule the next one.
             let delay = 1000 / FPS - (Date.now() - begin);
-            setTimeout(processVideo, delay);
+            timeIds = setTimeout(processVideo, delay);
         } catch (err) {
             utils.printError(err);
         }
     };
 
-
     function onVideoStarted() {
         streaming = true;
-        //startAndStop.innerText = 'Stop';
+        startAndStop.innerText = 'Stop';
         videoInput.width = videoInput.videoWidth;
         videoInput.height = videoInput.videoHeight;
-        setTimeout(processVideo, 0);
+        timeIds = setTimeout(processVideo, 0);
+    }
+
+    function onChangeCamera(selectedDeviceId) {
+        utils.stopCamera();
+        _options.deviceID = selectedDeviceId;
+        utils.startCamera('vga', onVideoStarted, _options.videoInputDom, _options.deviceID, onChangeCamera);
     }
 
     function onVideoStopped() {
         streaming = false;
         canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
-        //startAndStop.innerText = 'Start';
+        startAndStop.innerText = 'Start';
+        clearTimeout(timeIds);
     }
 
 }
