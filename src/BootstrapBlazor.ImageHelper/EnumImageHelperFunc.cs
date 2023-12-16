@@ -61,6 +61,12 @@ public enum EnumImageHelperFunc
     FaceDetection1st,
 
     /// <summary>
+    /// 摄像头人脸检测
+    /// </summary>
+    [Description("摄像头人脸检测")]
+    FaceDetectionInCamera,
+
+    /// <summary>
     /// 运动估计
     /// </summary>
     [Description("运动估计")]

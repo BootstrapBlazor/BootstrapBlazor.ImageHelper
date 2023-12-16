@@ -22,7 +22,7 @@ public partial class ImageHelper : IAsyncDisposable
 
     [Inject]
     [NotNull]
-    private HttpClient? HttpClient  { get; set; }
+    private HttpClient? HttpClient { get; set; }
 
     private IJSObjectReference? Module { get; set; }
     private DotNetObjectReference<ImageHelper>? Instance { get; set; }
@@ -49,7 +49,7 @@ public partial class ImageHelper : IAsyncDisposable
 
     private bool IsOpenCVReady { get; set; }
     private string Status => IsOpenCVReady ? "初始化完成" : "正在初始化...";
-    private string? Message { get; set; } 
+    private string? Message { get; set; }
 
     private bool FirstRender { get; set; } = true;
 
@@ -60,10 +60,10 @@ public partial class ImageHelper : IAsyncDisposable
             if (!firstRender) return;
             Instance = DotNetObjectReference.Create(this);
             Module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BootstrapBlazor.ImageHelper/ImageHelper.razor.js" + "?v=" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
-            while (!await AddScript())
-            {
-                await Task.Delay(500);
-            }
+            //while (!await AddScript())
+            //{
+            //    await Task.Delay(500);
+            //}
             await Init();
             FirstRender = false;
 
@@ -72,7 +72,7 @@ public partial class ImageHelper : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Message=e.Message;
+            Message = e.Message;
             StateHasChanged();
             if (OnError != null) await OnError.Invoke(e.Message);
         }
@@ -93,7 +93,7 @@ public partial class ImageHelper : IAsyncDisposable
         IsOpenCVReady = true;
         StateHasChanged();
         if (OnResult != null)
-            await OnResult.Invoke(Status); 
+            await OnResult.Invoke(Status);
     }
 
     [JSInvokable]
@@ -115,7 +115,7 @@ public partial class ImageHelper : IAsyncDisposable
 
         try
         {
-            await Module!.InvokeVoidAsync("init", Instance, Element, Options, ImageDataDom, CanvasDom);
+            await Module!.InvokeVoidAsync("init", Instance, Element, Options, ImageDataDom, CanvasDom, "/_content/BootstrapBlazor.ImageHelper/opencv.js");
             if (OnResult != null)
                 await OnResult.Invoke(Status);
         }
@@ -132,14 +132,14 @@ public partial class ImageHelper : IAsyncDisposable
     public string ImageDataDom { get; set; } = "imageSrc";
 
     [Parameter]
-    public ElementReference CanvasElement{ get; set; } 
+    public ElementReference CanvasElement { get; set; }
 
     [Parameter]
     public string CanvasDom { get; set; } = "canvasOutput";
 
     private async Task OnChanged(SelectedItem item)
     {
-       await Apply();
+        await Apply();
     }
 
     public virtual async Task Apply(EnumImageHelperFunc func)
@@ -150,11 +150,11 @@ public partial class ImageHelper : IAsyncDisposable
 
     public virtual async Task Apply()
     {
-        if (FirstRender || Options.Type== EnumImageHelperFunc.None) return;
-        Message =string.Empty;
+        if (FirstRender || Options.Type == EnumImageHelperFunc.None) return;
+        Message = string.Empty;
         try
         {
-            var func = Options.Type.ToString().Substring(0,1).ToLower()+ Options.Type.ToString().Substring(1);
+            var func = Options.Type.ToString().Substring(0, 1).ToLower() + Options.Type.ToString().Substring(1);
             await Module!.InvokeVoidAsync(func, Instance, Element, ImageDataDom, CanvasDom);
         }
         catch (Exception ex)

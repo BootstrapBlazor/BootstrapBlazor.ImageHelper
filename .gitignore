@@ -350,3 +350,5 @@ src/BootstrapBlazor.ImageHelper/wwwroot/qr/opencv453pre.js
 src/BootstrapBlazor.ImageHelper/wwwroot/qr/opencv452.js
 src/BootstrapBlazor.ImageHelper/wwwroot/qr/index.html
 src/BootstrapBlazor.ImageHelper/wwwroot/qr/utils.js
+/src/BootstrapBlazor.ImageHelper/wwwroot/qr/wasm.js
+/src/BootstrapBlazor.ImageHelper/wwwroot/qr/opencv455-shell.js

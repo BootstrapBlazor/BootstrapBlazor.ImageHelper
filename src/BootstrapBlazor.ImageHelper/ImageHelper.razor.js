@@ -1,44 +1,36 @@
 ﻿let loading = true;
 let img = new Image();
 export function addScript(url) {
-
-    let scriptsIncluded = false;
-
-    let scriptTags = document.querySelectorAll('head > script');
-    scriptTags.forEach(scriptTag => {
-        if (scriptTag) {
-            let srcAttribute = scriptTag.getAttribute('src');
-            if (srcAttribute && srcAttribute.startsWith(url)) {
-                scriptsIncluded = true;
-                return true;
-            }
-        }
-    });
-
-    if (scriptsIncluded) { //防止多次向页面添加 JS 脚本.Prevent adding JS scripts to page multiple times.
-        return true;
-    }
-
-    let script = document.createElement('script');
-    script.src = url;
-    script.defer = true;
-    script.addEventListener("load", async () => {
-        if (cv.getBuildInformation) {
-            console.log(cv.getBuildInformation()); 
-        } else {
-            // WASM
-            if (cv instanceof Promise) {
-                cv = await cv;
-                console.log(cv.getBuildInformation()); 
+    return new Promise((resolve, reject) => {
+        let script = document.createElement("script");
+        script.setAttribute("async", "");
+        script.setAttribute("type", "text/javascript");
+        script.setAttribute("id", "opencvjs");
+        script.addEventListener("load", async () => {
+            if (cv.getBuildInformation) {
+                console.log(cv.getBuildInformation());
+                resolve();
             } else {
-                cv["onRuntimeInitialized"] = () => {
-                    console.log(cv.getBuildInformation()); 
-                };
+                // WASM
+                if (cv instanceof Promise) {
+                    cv = await cv;
+                    console.log(cv.getBuildInformation());
+                    resolve();
+                } else {
+                    cv["onRuntimeInitialized"] = () => {
+                        console.log(cv.getBuildInformation());
+                        resolve();
+                    };
+                }
             }
-        }
+        });
+        script.addEventListener("error", () => {
+            reject();
+        });
+        script.src = url;
+        let node = document.getElementsByTagName("script")[0];
+        node.parentNode.insertBefore(script, node);
     });
-    document.head.appendChild(script);
-    return false;
 }
 
 export function drawPixels(canvasElement, imageBytes) {
@@ -48,11 +40,11 @@ export function drawPixels(canvasElement, imageBytes) {
     canvasContext.putImageData(canvasImageData, 0, 0);
 }
 
-export function init(instance, element, options, imageDataDom, canvasDom) {
+export function init(instance, element, options, imageDataDom, canvasDom, url) {
     let inCanvas = element.querySelector('#' + imageDataDom);
     let inputElement = element.querySelector('#fileInput');
 
-    inputElement.addEventListener('change', (e) => {
+    if (inputElement) inputElement.addEventListener('change', (e) => {
         img.src = URL.createObjectURL(e.target.files[0]);
     }, false);
 
@@ -65,12 +57,19 @@ export function init(instance, element, options, imageDataDom, canvasDom) {
             })
         }
     };
+    addScript(url).then(
+        () => {
 
-    function onOpenCvReady() {
-        instance.invokeMethodAsync('GetReady');
-    }
+            function onOpenCvReady() {
+                instance.invokeMethodAsync('GetReady');
+            }
 
-    onOpenCvReady();
+            onOpenCvReady();
+        },
+        () => {
+            utils.printError("Failed to load " + OPENCV_URL);
+        }
+    );
 }
 
 function isLoadImage() {
@@ -83,32 +82,6 @@ function isLoadImage() {
 export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     let self = this;
     this.errorOutput = document.getElementById(errorOutputId);
-
-    const OPENCV_URL = 'opencv.js';
-    this.loadOpenCv = function (onloadCallback) {
-        let script = document.createElement('script');
-        script.setAttribute('async', '');
-        script.setAttribute('type', 'text/javascript');
-        script.addEventListener('load', () => {
-            if (cv.getBuildInformation) {
-                console.log(cv.getBuildInformation());
-                onloadCallback();
-            }
-            else {
-                // WASM
-                cv['onRuntimeInitialized'] = () => {
-                    console.log(cv.getBuildInformation());
-                    onloadCallback();
-                }
-            }
-        });
-        script.addEventListener('error', () => {
-            self.printError('Failed to load ' + OPENCV_URL);
-        });
-        script.src = OPENCV_URL;
-        let node = document.getElementsByTagName('script')[0];
-        node.parentNode.insertBefore(script, node);
-    };
 
     this.createFileFromUrl = function (path, url, callback) {
         let request = new XMLHttpRequest();
@@ -139,21 +112,7 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
             ctx.drawImage(img, 0, 0, img.width, img.height);
         };
         img.src = url;
-    };
-
-    this.executeCode = function (textAreaId) {
-        try {
-            this.clearError();
-            let code = document.getElementById(textAreaId).value;
-            eval(code);
-        } catch (err) {
-            this.printError(err);
-        }
-    };
-
-    this.clearError = function () {
-        this.errorOutput.innerHTML = '';
-    };
+    };    
 
     this.printError = function (err) {
         if (typeof err === 'undefined') {
@@ -177,26 +136,6 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         this.errorOutput.innerHTML = err;
     };
 
-    this.loadCode = function (scriptId, textAreaId) {
-        let scriptNode = document.getElementById(scriptId);
-        let textArea = document.getElementById(textAreaId);
-        if (scriptNode.type !== 'text/code-snippet') {
-            throw Error('Unknown code snippet type');
-        }
-        textArea.value = scriptNode.text.replace(/^\n/, '');
-    };
-
-    this.addFileInputHandler = function (fileInputId, canvasId) {
-        let inputElement = document.getElementById(fileInputId);
-        inputElement.addEventListener('change', (e) => {
-            let files = e.target.files;
-            if (files.length > 0) {
-                let imgUrl = URL.createObjectURL(files[0]);
-                self.loadImageToCanvas(imgUrl, canvasId);
-            }
-        }, false);
-    };
-
     function onVideoCanPlay() {
         if (self.onCameraStartedCallback) {
             self.onCameraStartedCallback(self.stream, self.video);
@@ -204,32 +143,34 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     };
 
     this.startCamera = function (resolution, callback, videoId) {
-        const constraints = {
-            'qvga': { width: { exact: 320 }, height: { exact: 240 } },
-            'vga': { width: { exact: 640 }, height: { exact: 480 } }
-        };
-        let video = document.getElementById(videoId);
-        if (!video) {
-            video = document.createElement('video');
-        }
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const constraints = {
+                'qvga': { width: { exact: 320 }, height: { exact: 240 } },
+                'vga': { width: { exact: 640 }, height: { exact: 480 } }
+            };
+            let video = document.getElementById(videoId);
+            if (!video) {
+                video = document.createElement('video');
+            }
 
-        let videoConstraint = constraints[resolution];
-        if (!videoConstraint) {
-            videoConstraint = true;
-        }
+            let videoConstraint = constraints[resolution];
+            if (!videoConstraint) {
+                videoConstraint = true;
+            }
 
-        navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false })
-            .then(function (stream) {
-                video.srcObject = stream;
-                video.play();
-                self.video = video;
-                self.stream = stream;
-                self.onCameraStartedCallback = callback;
-                video.addEventListener('canplay', onVideoCanPlay, false);
-            })
-            .catch(function (err) {
-                self.printError('Camera Error: ' + err.name + ' ' + err.message);
-            });
+            navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                    video.play();
+                    self.video = video;
+                    self.stream = stream;
+                    self.onCameraStartedCallback = callback;
+                    video.addEventListener('canplay', onVideoCanPlay, false);
+                })
+                .catch(function (err) {
+                    self.printError('Camera Error: ' + err.name + ' ' + err.message);
+                });
+        }
     };
 
     this.stopCamera = function () {
@@ -348,7 +289,7 @@ function onOpenUtilsReady() {
     });
 }
 function faceDetectionBase(instance, element, imageDataDom, canvasDom, type) {
-    if (!isLoadImage()) return;
+    if (type != 3 && !isLoadImage()) return false;
     if (loading) {
         let utils = new Utils('errorMessage');
         let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
@@ -360,15 +301,18 @@ function faceDetectionBase(instance, element, imageDataDom, canvasDom, type) {
                 instance.invokeMethodAsync('GetResult', '加载模型文件完成');
                 if (type === 1)
                     faceDetection(instance, element, imageDataDom, canvasDom);
+                else if (type === 3)
+                    faceDetectionInCamera(instance, element, imageDataDom, canvasDom);
                 else
                     faceDetection1st(instance, element, imageDataDom, canvasDom);
             });
         });
         return instance.invokeMethodAsync('GetResult', '正在加载模型文件');
     }
+    return true;
 }
 export function faceDetection(instance, element, imageDataDom, canvasDom) {
-    faceDetectionBase(instance, element, imageDataDom, canvasDom, 1);
+    if (!faceDetectionBase(instance, element, imageDataDom, canvasDom, 1)) return;
     let imageData = element.querySelector('#' + imageDataDom);
     let src = cv.imread(imageData);
     let gray = new cv.Mat();
@@ -401,13 +345,13 @@ export function faceDetection(instance, element, imageDataDom, canvasDom) {
         }
         roiGray.delete(); roiSrc.delete();
     }
-    cv.imshow('canvasOutput', src);
+    cv.imshow(canvasDom, src);
     src.delete(); gray.delete(); faceCascade.delete();
     eyeCascade.delete(); faces.delete(); eyes.delete();
 }
 
 export function faceDetection1st(instance, element, imageDataDom, canvasDom) {
-    faceDetectionBase(instance, element, imageDataDom, canvasDom, 2);
+    if (!faceDetectionBase(instance, element, imageDataDom, canvasDom, 2)) return;
     let imageData = element.querySelector('#' + imageDataDom);
     let src = cv.imread(imageData);
     let gray = new cv.Mat();
@@ -569,4 +513,77 @@ export function faceDetection1st(instance, element, imageDataDom, canvasDom) {
 //    cv.imshow(canvasDom, dst);
 //    src.delete();
 //    dst.delete()
-//} 
+//}
+
+export function faceDetectionInCamera(instance, element, imageDataDom, canvasDom) {
+    if (!faceDetectionBase(instance, element, imageDataDom, canvasDom, 3)) return;
+    let utils = new Utils('errorMessage');
+
+    let streaming = false;
+    let videoInput = document.getElementById('videoInput');
+    let startAndStop = document.getElementById('startAndStop');
+    let canvasOutput = document.getElementById(canvasDom);
+    let canvasContext = canvasOutput.getContext('2d');
+
+    let video = document.getElementById('videoInput');
+    let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+    let dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+    let gray = new cv.Mat();
+    let cap = new cv.VideoCapture(video);
+    let faces = new cv.RectVector();
+    let faceCascade = new cv.CascadeClassifier();
+    // load pre-trained classifiers
+    faceCascade.load('haarcascade_frontalface_default.xml');
+    const FPS = 30;
+
+    utils.startCamera('qvga', onVideoStarted, 'videoInput'); 
+    function processVideo() {
+        try {
+            if (!streaming) {
+                // clean and stop.
+                src.delete();
+                dst.delete();
+                gray.delete();
+                faces.delete();
+                faceCascade.delete();
+                return;
+            }
+            let begin = Date.now();
+            // start processing.
+            cap.read(src);
+            src.copyTo(dst);
+            cv.cvtColor(dst, gray, cv.COLOR_RGBA2GRAY, 0);
+            // detect faces.
+            faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0);
+            // draw faces.
+            for (let i = 0; i < faces.size(); ++i) {
+                let face = faces.get(i);
+                let point1 = new cv.Point(face.x, face.y);
+                let point2 = new cv.Point(face.x + face.width, face.y + face.height);
+                cv.rectangle(dst, point1, point2, [255, 0, 0, 255]);
+            }
+            cv.imshow(canvasDom, dst);
+            // schedule the next one.
+            let delay = 1000 / FPS - (Date.now() - begin);
+            setTimeout(processVideo, delay);
+        } catch (err) {
+            utils.printError(err);
+        }
+    };
+
+
+    function onVideoStarted() {
+        streaming = true;
+        //startAndStop.innerText = 'Stop';
+        videoInput.width = videoInput.videoWidth;
+        videoInput.height = videoInput.videoHeight;
+        setTimeout(processVideo, 0);
+    }
+
+    function onVideoStopped() {
+        streaming = false;
+        canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
+        //startAndStop.innerText = 'Start';
+    }
+
+}

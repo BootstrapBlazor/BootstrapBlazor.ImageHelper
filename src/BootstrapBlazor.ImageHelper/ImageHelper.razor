@@ -7,8 +7,15 @@
 
     <div class="row g-3">
         <div class="inputoutput col-12 col-sm-6">
-            <canvas id="imageSrc" width="400" height="400"></canvas>
             <div class="caption">选择图片 <input type="file" id="fileInput" name="file" /></div>
+            @if (Options.Type != EnumImageHelperFunc.FaceDetectionInCamera)
+            {
+                <canvas id="imageSrc" width="400" height="400"></canvas>
+            }
+            else
+            {
+                <video id="videoInput" width=320 height=240></video>
+            }
         </div>
         <div class="inputoutput col-12 col-sm-6">
             <canvas id="canvasOutput" width="400" height="400"></canvas>
