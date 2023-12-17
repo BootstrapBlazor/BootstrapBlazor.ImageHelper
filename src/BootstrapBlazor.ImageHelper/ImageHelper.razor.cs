@@ -4,10 +4,10 @@
 // e-mail:zhouchuanglin@gmail.com 
 // **********************************
 
+using BootstrapBlazor.ImageHelper;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Http;
 
 namespace BootstrapBlazor.Components;
 
@@ -32,11 +32,8 @@ public partial class ImageHelper : IAsyncDisposable
     /// </summary>
     public ElementReference Element { get; set; }
 
-    [Parameter]
-    public ImageHelperOption Options { get; set; } = new();
-
     /// <summary>
-    /// 条码生成(svg)回调方法/ Barcode generated(svg) callback method
+    /// 消息回调方法/ message callback method
     /// </summary>
     [Parameter]
     public Func<string, Task>? OnResult { get; set; }
@@ -53,21 +50,33 @@ public partial class ImageHelper : IAsyncDisposable
 
     private bool FirstRender { get; set; } = true;
 
+    [NotNull]
+    private StorageService? Storage { get; set; }
+
+    /// <summary>
+    /// 选项
+    /// </summary>
+    [Parameter]
+    public ImageHelperOption Options { get; set; } = new();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
             if (!firstRender) return;
-            Instance = DotNetObjectReference.Create(this);
+            Storage ??= new StorageService(JSRuntime);
             Module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BootstrapBlazor.ImageHelper/ImageHelper.razor.js" + "?v=" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
-            //while (!await AddScript())
-            //{
-            //    await Task.Delay(500);
-            //}
+            Instance = DotNetObjectReference.Create(this);
+            try
+            {
+                if (Options.SaveDeviceID)
+                    Options.DeviceID = await Storage.GetValue("CamsDeviceID", Options.DeviceID);
+            }
+            catch (Exception)
+            {
+            }
             await Init();
-            FirstRender = false;
-
-            //var imageBytes = await HttpClient.GetByteArrayAsync("https://localhost:5011/_content/BootstrapBlazor.ImageHelper/opencv.jpg");
+            FirstRender = false; 
 
         }
         catch (Exception e)
@@ -78,8 +87,6 @@ public partial class ImageHelper : IAsyncDisposable
         }
 
     }
-
-    public async Task<bool> AddScript() => await Module!.InvokeAsync<bool>("addScript", "/_content/BootstrapBlazor.ImageHelper/opencv.js");
 
     protected override async Task OnParametersSetAsync()
     {
@@ -103,19 +110,18 @@ public partial class ImageHelper : IAsyncDisposable
     }
 
     /// <summary>
-    /// 生成条码/ Generate barcode
     /// </summary>
     /// <param name="input"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    public async Task<bool> Init(string? input = null, ImageHelperOption? options = null)
+    public async Task<bool> Init(ImageHelperOption? options = null)
     {
         if (options != null)
             Options = options;
 
         try
         {
-            await Module!.InvokeVoidAsync("init", Instance, Element, Options, ImageDataDom, CanvasDom, "/_content/BootstrapBlazor.ImageHelper/opencv.js");
+            await Module!.InvokeVoidAsync("init", Instance, Element, Options);
             if (OnResult != null)
                 await OnResult.Invoke(Status);
         }
@@ -127,15 +133,6 @@ public partial class ImageHelper : IAsyncDisposable
         }
         return IsOpenCVReady;
     }
-
-    [Parameter]
-    public string ImageDataDom { get; set; } = "imageSrc";
-
-    [Parameter]
-    public ElementReference CanvasElement { get; set; }
-
-    [Parameter]
-    public string CanvasDom { get; set; } = "canvasOutput";
 
     private async Task OnChanged(SelectedItem item)
     {
@@ -155,7 +152,8 @@ public partial class ImageHelper : IAsyncDisposable
         try
         {
             var func = Options.Type.ToString().Substring(0, 1).ToLower() + Options.Type.ToString().Substring(1);
-            await Module!.InvokeVoidAsync(func, Instance, Element, ImageDataDom, CanvasDom);
+            //StateHasChanged();
+            await Module!.InvokeVoidAsync(func, Instance, Element, Options);
         }
         catch (Exception ex)
         {
@@ -163,40 +161,7 @@ public partial class ImageHelper : IAsyncDisposable
             StateHasChanged();
             System.Console.WriteLine(ex.Message);
         }
-    }
-
-    public virtual async Task Grayscale()
-    {
-        try
-        {
-            await Module!.InvokeVoidAsync("grayscale", Instance, Element, ImageDataDom, CanvasDom);
-        }
-        catch
-        {
-        }
-    }
-
-    public virtual async Task EdgeDetection()
-    {
-        try
-        {
-            await Module!.InvokeVoidAsync("edgeDetection", Instance, Element, ImageDataDom, CanvasDom);
-        }
-        catch
-        {
-        }
-    }
-
-    public virtual async Task FeaturePointDetection()
-    {
-        try
-        {
-            await Module!.InvokeVoidAsync("featurePointDetection", Instance, Element, ImageDataDom, CanvasDom);
-        }
-        catch
-        {
-        }
-    }
+    } 
 
     [JSInvokable]
     public async Task GetResult(string msg)
@@ -206,6 +171,26 @@ public partial class ImageHelper : IAsyncDisposable
         System.Console.WriteLine(msg);
         if (OnResult != null)
             await OnResult.Invoke(msg);
+    }
+
+    /// <summary>
+    /// 选择摄像头回调方法
+    /// </summary>
+    /// <param name="base64encodedstring"></param>
+    /// <returns></returns>
+    [JSInvokable]
+    public async Task SelectDeviceID(string deviceID)
+    {
+        try
+        {
+            if (Options.SaveDeviceID)
+            {
+                await Storage.SetValue("CamsDeviceID", deviceID);
+            }
+        }
+        catch
+        {
+        }
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()

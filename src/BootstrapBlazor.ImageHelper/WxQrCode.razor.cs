@@ -4,6 +4,7 @@
 // e-mail:zhouchuanglin@gmail.com 
 // **********************************
 
+using BootstrapBlazor.ImageHelper;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
@@ -33,13 +34,10 @@ public partial class WxQrCode : IAsyncDisposable
     /// <summary>
     /// UI界面元素的引用对象
     /// </summary>
-    public ElementReference Element { get; set; }
-
-    [Parameter]
-    public ElementReference CanvasElement { get; set; }
+    public ElementReference Element { get; set; } 
 
     /// <summary>
-    /// 条码生成(svg)回调方法/ Barcode generated(svg) callback method
+    /// 消息回调方法/ message callback method
     /// </summary>
     [Parameter]
     public Func<string, Task>? OnResult { get; set; }
@@ -50,12 +48,6 @@ public partial class WxQrCode : IAsyncDisposable
     [Parameter]
     public Func<string, Task>? OnError { get; set; }
 
-    /// <summary>
-    /// 452 可以画框, 455没编译画框
-    /// </summary>
-    [Parameter]
-    public int Ver { get; set; }
-
     private bool IsOpenCVReady { get; set; }
     private string Status => IsOpenCVReady ? "初始化完成" : "正在初始化...";
     private string? Message { get; set; } 
@@ -64,12 +56,6 @@ public partial class WxQrCode : IAsyncDisposable
 
     [NotNull]
     private StorageService? Storage { get; set; }
-
-    /// <summary>
-    /// 选择设备按钮文本/Select device button title
-    /// </summary>
-    [Parameter]
-    public string SelectDeviceBtnTitle { get; set; } = "选择设备";
 
     /// <summary>
     /// 选项
@@ -128,13 +114,14 @@ public partial class WxQrCode : IAsyncDisposable
     }
 
     /// <summary>
-    /// 生成条码/ Generate barcode
     /// </summary>
     /// <param name="input"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    public async Task<bool> Init()
+    public async Task<bool> Init(WxQrCodeOption? options = null)
     {
+        if (options != null)
+            Options = options;
 
         try
         {
@@ -149,13 +136,7 @@ public partial class WxQrCode : IAsyncDisposable
             System.Console.WriteLine(ex.Message);
         }
         return IsOpenCVReady;
-    }
-
-    private async Task OnChanged(SelectedItem item)
-    {
-       await Apply();
-    }
-     
+    }     
 
     public virtual async Task Apply()
     {
@@ -226,60 +207,6 @@ public partial class WxQrCode : IAsyncDisposable
             await Module.DisposeAsync();
         }
         Instance?.Dispose();
-    }
-
-    #region StorageService
-    private class StorageService
-    {
-        private readonly IJSRuntime JSRuntime;
-
-        public StorageService(IJSRuntime jsRuntime)
-        {
-            JSRuntime = jsRuntime;
-        }
-
-        public async Task SetValue<TValue>(string key, TValue value)
-        {
-            await JSRuntime.InvokeVoidAsync("eval", $"localStorage.setItem('{key}', '{value}')");
-        }
-
-        public async Task<TValue?> GetValue<TValue>(string key, TValue? def)
-        {
-            try
-            {
-                var cValue = await JSRuntime.InvokeAsync<TValue>("eval", $"localStorage.getItem('{key}');");
-                return cValue ?? def;
-            }
-            catch
-            {
-                var cValue = await JSRuntime.InvokeAsync<string>("eval", $"localStorage.getItem('{key}');");
-                if (cValue == null)
-                    return def;
-
-                var newValue = GetValueI<TValue>(cValue);
-                return newValue ?? def;
-
-            }
-        }
-
-        public static T? GetValueI<T>(string value)
-        {
-            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
-            if (converter != null)
-            {
-                return (T?)converter.ConvertFrom(value);
-            }
-            return default;
-            //return (T)Convert.ChangeType(value, typeof(T));
-        }
-
-        public async Task RemoveValue(string key)
-        {
-            await JSRuntime.InvokeVoidAsync("eval", $"localStorage.removeItem('{key}')");
-        }
-
-
-    }
-    #endregion
+    } 
 
 }

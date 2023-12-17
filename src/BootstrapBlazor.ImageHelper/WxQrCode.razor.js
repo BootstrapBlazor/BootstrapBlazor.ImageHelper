@@ -1,27 +1,28 @@
-﻿let loadingQr = true;
+﻿import { vibrate, addScript, Utils } from '/_content/BootstrapBlazor.ImageHelper/utils.js'
+
+let loadingQr = true;
 let img = new Image();
 let qrcode_detector;
 let element = null;
 let instance = null;
 let options = null;
-let supportsVibrate = false;
 
 export function init(_instance, _element, _options) {
     options = _options;
     instance = _instance;
     element = _element;
-    supportsVibrate = "vibrate" in navigator;
     let inputElement = element.querySelector('#' + options.fileInputDom);
     let captureElement = element.querySelector('#' + options.captureDom);
     let canvasOutput = element.querySelector('#' + _options.imageDataDom);
+    let utils = new Utils(instance, element, options);
     canvasOutput.height = 0;
     canvasOutput.width = 0;
 
-    captureElement.addEventListener('change', (e) => {
+    inputElement.addEventListener('change', (e) => {
         img.src = URL.createObjectURL(e.target.files[0]);
     }, false);
 
-    inputElement.addEventListener('change', (e) => {
+    captureElement.addEventListener('change', (e) => {
         img.src = URL.createObjectURL(e.target.files[0]);
     }, false);
 
@@ -35,7 +36,6 @@ export function init(_instance, _element, _options) {
     addScript(options.openCvUrl).then(
         () => {
             if (loadingQr) {
-                let utils = new Utils(options.errorOutputDom);
                 let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
                 let mod = 'detect.caffemodel';
                 utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
@@ -72,42 +72,6 @@ export function init(_instance, _element, _options) {
     );
 
 }
-export function vibrate() {
-    if (supportsVibrate) navigator.vibrate(1000);
-}
-
-export function addScript(url) {
-    return new Promise((resolve, reject) => {
-        let script = document.createElement("script");
-        script.setAttribute("async", "");
-        script.setAttribute("type", "text/javascript");
-        script.setAttribute("id", "opencvjs");
-        script.addEventListener("load", async () => {
-            if (cv.getBuildInformation) {
-                console.log(cv.getBuildInformation());
-                resolve();
-            } else {
-                // WASM
-                if (cv instanceof Promise) {
-                    cv = await cv;
-                    console.log(cv.getBuildInformation());
-                    resolve();
-                } else {
-                    cv["onRuntimeInitialized"] = () => {
-                        console.log(cv.getBuildInformation());
-                        resolve();
-                    };
-                }
-            }
-        });
-        script.addEventListener("error", () => {
-            reject();
-        });
-        script.src = url;
-        let node = document.getElementsByTagName("script")[0];
-        node.parentNode.insertBefore(script, node);
-    });
-}
 
 function isLoadImage() {
     if (!img.src) {
@@ -116,195 +80,6 @@ function isLoadImage() {
     }
     return true
 }
-
-export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
-    let self = this;
-    let selectedDeviceId = null;
-
-    this.errorOutput = element.querySelector('#' + errorOutputId);
-
-    this.createFileFromUrl = function (path, url, callback) {
-        let request = new XMLHttpRequest();
-        request.open('GET', url, true);
-        request.responseType = 'arraybuffer';
-        request.onload = function (ev) {
-            if (request.readyState === 4) {
-                if (request.status === 200) {
-                    let data = new Uint8Array(request.response);
-                    cv.FS_createDataFile('/', path, data, true, false, false);
-                    callback();
-                } else {
-                    self.printError('Failed to load ' + url + ' status: ' + request.status);
-                }
-            }
-        };
-        request.send();
-    };
-
-    this.clearError = function () {
-        this.errorOutput.innerHTML = '';
-    };
-
-    this.printError = function (err) {
-        if (typeof err === 'undefined') {
-            err = '';
-        } else if (typeof err === 'number') {
-            if (!isNaN(err)) {
-                if (typeof cv !== 'undefined') {
-                    err = 'Exception: ' + cv.exceptionFromPtr(err).msg;
-                }
-            }
-        } else if (typeof err === 'string') {
-            let ptr = Number(err.split(' ')[0]);
-            if (!isNaN(ptr)) {
-                if (typeof cv !== 'undefined') {
-                    err = 'Exception: ' + cv.exceptionFromPtr(ptr).msg;
-                }
-            }
-        } else if (err instanceof Error) {
-            err = err.stack.replace(/\n/g, '<br>');
-        }
-        this.errorOutput.innerHTML = err;
-    };
-
-    this.loadCode = function (scriptId, textAreaId) {
-        let scriptNode = element.querySelector('#' + scriptId);
-        let textArea = element.querySelector('#' + textAreaId);
-        if (scriptNode.type !== 'text/code-snippet') {
-            throw Error('Unknown code snippet type');
-        }
-        textArea.value = scriptNode.text.replace(/^\n/, '');
-    };
-
-    this.addFileInputHandler = function (fileInputId, canvasId) {
-        let inputElement = element.querySelector('#' + fileInputId);
-        inputElement.addEventListener('change', (e) => {
-            let files = e.target.files;
-            if (files.length > 0) {
-                let imgUrl = URL.createObjectURL(files[0]);
-                self.loadImageToCanvas(imgUrl, canvasId);
-            }
-        }, false);
-    };
-
-    function onVideoCanPlay() {
-        if (self.onCameraStartedCallback) {
-            self.onCameraStartedCallback(self.stream, self.video);
-        }
-    };
-
-    this.startCamera = function (resolution, callback, videoId, selectedDeviceId, changeCameraCallback) {
-        self.selectedDeviceId = selectedDeviceId;
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            let constraints = {
-                'qvga': { width: { exact: 320 }, height: { exact: 240 } },
-                'vga': { width: { exact: 640 }, height: { exact: 480 } }
-            };
-            let video = element.querySelector('#' + videoId);
-            if (!video) {
-                video = document.createElement('video');
-            }
-
-            let videoConstraint = constraints[resolution];
-            if (!videoConstraint) {
-                videoConstraint = true;
-            }
-            if (selectedDeviceId != null || options.deviceID != null) {
-                let deviceId = selectedDeviceId;
-                if (deviceId == null) deviceId = options.deviceID;
-                videoConstraint = {
-                    deviceId: deviceId ? { exact: deviceId } : undefined,
-                    width: { ideal: options.width },
-                    height: { ideal: options.height },
-                    facingMode: "environment",
-                    focusMode: "continuous"
-                }
-
-            }
-
-            navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false })
-                .then(function (stream) {
-                    video.srcObject = stream;
-                    video.play();
-                    self.video = video;
-                    self.stream = stream;
-                    self.onCameraStartedCallback = callback;
-                    video.addEventListener('canplay', onVideoCanPlay, false);
-
-                    self.listCameras(changeCameraCallback);
-                })
-                .catch(function (err) {
-                    self.printError('Camera Error: ' + err.name + ' ' + err.message);
-                });
-        }
-    };
-
-
-    this.listCameras = function (callback) {
-        if (selectedDeviceId != null) return;
-        navigator.mediaDevices.enumerateDevices()
-            .then((devices) => {
-                let sourceSelect = element.querySelector('[data-action=' + options.sourceSelectDom + ']');
-                let sourceSelectPanel = element.querySelector('[data-action=' + options.sourceSelectPanelDom + ']');
-                let videoInputDevices = [];
-                devices.forEach((device) => {
-                    if (device.kind === 'videoinput') {
-                        videoInputDevices.push(device);
-                    }
-                });
-                if (options.deviceID != null) {
-                    selectedDeviceId = options.deviceID
-                } else if (videoInputDevices.length > 1) {
-                    selectedDeviceId = videoInputDevices[1].deviceId
-                } else {
-                    selectedDeviceId = videoInputDevices[0].deviceId
-                }
-                if (videoInputDevices.length > 1) {
-                    sourceSelect.innerHTML = '';
-                    devices.forEach((device) => {
-                        if (device.kind === 'videoinput') {
-                            if (options.debug) console.log(`${device.label} id = ${device.deviceId}`);
-                            const sourceOption = document.createElement('option');
-                            if (device.label === '') {
-                                sourceOption.text = 'Camera' + (sourceSelect.length + 1);
-                            } else {
-                                sourceOption.text = device.label
-                            }
-                            sourceOption.value = device.deviceId
-                            if (selectedDeviceId != null && device.deviceId == selectedDeviceId) {
-                                sourceOption.selected = true;
-                            }
-                            sourceSelect.appendChild(sourceOption)
-                        }
-                    });
-
-                    sourceSelect.onchange = () => {
-                        selectedDeviceId = sourceSelect.value;
-                        if (options.debug) console.log(`selectedDevice: ${sourceSelect.options[sourceSelect.selectedIndex].text} id = ${sourceSelect.value}`);
-                        instance.invokeMethodAsync('SelectDeviceID', selectedDeviceId);
-                        callback(selectedDeviceId);
-                    }
-
-                    sourceSelectPanel.style.display = 'block'
-
-                }
-            })
-            .catch((err) => {
-                console.error(`${err.name}: ${err.message}`);
-            });
-    };
-
-    this.stopCamera = function () {
-        if (this.video) {
-            this.video.pause();
-            this.video.srcObject = null;
-            this.video.removeEventListener('canplay', onVideoCanPlay);
-        }
-        if (this.stream) {
-            this.stream.getVideoTracks()[0].stop();
-        }
-    };
-};
 
 export function wechatQrcode452(instance, element, _options) {
     if (!isLoadImage()) return;
@@ -341,13 +116,12 @@ export function wechatQrcode452(instance, element, _options) {
 
 
 export function wechatQrcodeCamera(instance, element, _options) {
-    let utils = new Utils(_options.errorOutputDom);
+    let utils = new Utils(instance, element, _options);
 
     let streaming = false;
     let videoInput = element.querySelector('#' + _options.videoInputDom);
     let startAndStop = element.querySelector('#' + _options.startAndStopDom);
     let canvasOutput = element.querySelector('#' + _options.imageDataDom);
-    let video = element.querySelector('#' + _options.videoInputDom);
     let src;
     let dst;
     let gray;
@@ -362,14 +136,14 @@ export function wechatQrcodeCamera(instance, element, _options) {
     startAndStop.addEventListener('click', () => onToggleCamera());
 
     function onToggleCamera() {
-         if (!streaming) {
+        if (!streaming) {
             utils.clearError();
             utils.startCamera('vga', onVideoStarted, _options.videoInputDom, _options.deviceID, onChangeCamera);
         } else {
             utils.stopCamera();
             onVideoStopped();
         }
-   }
+    }
 
     function processVideo() {
         try {
@@ -414,7 +188,7 @@ export function wechatQrcodeCamera(instance, element, _options) {
         } catch (err) {
             utils.printError(err);
             if (retry) {
-                retry = false; 
+                retry = false;
                 setTimeout(onToggleCamera(), 100);
                 setTimeout(onToggleCamera(), 0);
             }
@@ -422,10 +196,10 @@ export function wechatQrcodeCamera(instance, element, _options) {
     };
 
     function onVideoStarted() {
-        src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
-        dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+        src = new cv.Mat(videoInput.height, videoInput.width, cv.CV_8UC4);
+        dst = new cv.Mat(videoInput.height, videoInput.width, cv.CV_8UC1);
         gray = new cv.Mat();
-        cap = new cv.VideoCapture(video);
+        cap = new cv.VideoCapture(videoInput);
         points_vec = new cv.MatVector();
 
         streaming = true;

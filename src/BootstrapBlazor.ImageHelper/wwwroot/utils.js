@@ -1,40 +1,51 @@
-function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
-    let self = this;
-    this.errorOutput = document.getElementById(errorOutputId);
+﻿export function vibrate() {
+    if ("vibrate" in navigator) navigator.vibrate(1000);
+}
 
-    const OPENCV_URL = 'opencv.js';
-    this.loadOpenCv = function(onloadCallback) {
-        let script = document.createElement('script');
-        script.setAttribute('async', '');
-        script.setAttribute('type', 'text/javascript');
-        script.addEventListener('load', () => {
-            if (cv.getBuildInformation)
-            {
+export function addScript(url) {
+    return new Promise((resolve, reject) => {
+        let script = document.createElement("script");
+        script.setAttribute("async", "");
+        script.setAttribute("type", "text/javascript");
+        script.setAttribute("id", "opencvjs");
+        script.addEventListener("load", async () => {
+            if (cv.getBuildInformation) {
                 console.log(cv.getBuildInformation());
-                onloadCallback();
-            }
-            else
-            {
+                resolve();
+            } else {
                 // WASM
-                cv['onRuntimeInitialized']=()=>{
+                if (cv instanceof Promise) {
+                    cv = await cv;
                     console.log(cv.getBuildInformation());
-                    onloadCallback();
+                    resolve();
+                } else {
+                    cv["onRuntimeInitialized"] = () => {
+                        console.log(cv.getBuildInformation());
+                        resolve();
+                    };
                 }
             }
         });
-        script.addEventListener('error', () => {
-            self.printError('Failed to load ' + OPENCV_URL);
+        script.addEventListener("error", () => {
+            reject();
         });
-        script.src = OPENCV_URL;
-        let node = document.getElementsByTagName('script')[0];
+        script.src = url;
+        let node = document.getElementsByTagName("script")[0];
         node.parentNode.insertBefore(script, node);
-    };
+    });
+}
 
-    this.createFileFromUrl = function(path, url, callback) {
+export function Utils(instance, element,options) { // eslint-disable-line no-unused-vars
+    let self = this;
+    let selectedDeviceId = null;
+
+    this.errorOutput = element.querySelector('#' + options.errorOutputDom);
+
+    this.createFileFromUrl = function (path, url, callback) {
         let request = new XMLHttpRequest();
         request.open('GET', url, true);
         request.responseType = 'arraybuffer';
-        request.onload = function(ev) {
+        request.onload = function (ev) {
             if (request.readyState === 4) {
                 if (request.status === 200) {
                     let data = new Uint8Array(request.response);
@@ -48,34 +59,11 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         request.send();
     };
 
-    this.loadImageToCanvas = function(url, cavansId) {
-        let canvas = document.getElementById(cavansId);
-        let ctx = canvas.getContext('2d');
-        let img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = function() {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0, img.width, img.height);
-        };
-        img.src = url;
-    };
-
-    this.executeCode = function(textAreaId) {
-        try {
-            this.clearError();
-            let code = document.getElementById(textAreaId).value;
-            eval(code);
-        } catch (err) {
-            this.printError(err);
-        }
-    };
-
-    this.clearError = function() {
+    this.clearError = function () {
         this.errorOutput.innerHTML = '';
     };
 
-    this.printError = function(err) {
+    this.printError = function (err) {
         if (typeof err === 'undefined') {
             err = '';
         } else if (typeof err === 'number') {
@@ -97,17 +85,17 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         this.errorOutput.innerHTML = err;
     };
 
-    this.loadCode = function(scriptId, textAreaId) {
-        let scriptNode = document.getElementById(scriptId);
-        let textArea = document.getElementById(textAreaId);
+    this.loadCode = function (scriptId, textAreaId) {
+        let scriptNode = element.querySelector('#' + scriptId);
+        let textArea = element.querySelector('#' + textAreaId);
         if (scriptNode.type !== 'text/code-snippet') {
             throw Error('Unknown code snippet type');
         }
         textArea.value = scriptNode.text.replace(/^\n/, '');
     };
 
-    this.addFileInputHandler = function(fileInputId, canvasId) {
-        let inputElement = document.getElementById(fileInputId);
+    this.addFileInputHandler = function (fileInputId, canvasId) {
+        let inputElement = element.querySelector('#' + fileInputId);
         inputElement.addEventListener('change', (e) => {
             let files = e.target.files;
             if (files.length > 0) {
@@ -123,35 +111,108 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         }
     };
 
-    this.startCamera = function(resolution, callback, videoId) {
-        const constraints = {
-            'qvga': {width: {exact: 320}, height: {exact: 240}},
-            'vga': {width: {exact: 640}, height: {exact: 480}}};
-        let video = document.getElementById(videoId);
-        if (!video) {
-            video = document.createElement('video');
-        }
+    this.startCamera = function (resolution, callback, videoId, selectedDeviceId, changeCameraCallback) {
+        self.selectedDeviceId = selectedDeviceId;
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            let constraints = {
+                'qvga': { width: { exact: 320 }, height: { exact: 240 } },
+                'vga': { width: { exact: 640 }, height: { exact: 480 } }
+            };
+            let video = element.querySelector('#' + videoId);
+            if (!video) {
+                video = document.createElement('video');
+            }
 
-        let videoConstraint = constraints[resolution];
-        if (!videoConstraint) {
-            videoConstraint = true;
-        }
+            let videoConstraint = constraints[resolution];
+            if (!videoConstraint) {
+                videoConstraint = true;
+            }
+            if (selectedDeviceId != null || options.deviceID != null) {
+                let deviceId = selectedDeviceId;
+                if (deviceId == null) deviceId = options.deviceID;
+                videoConstraint = {
+                    deviceId: deviceId ? { exact: deviceId } : undefined,
+                    width: { ideal: options.width },
+                    height: { ideal: options.height },
+                    facingMode: "environment",
+                    focusMode: "continuous"
+                }
 
-        navigator.mediaDevices.getUserMedia({video: videoConstraint, audio: false})
-            .then(function(stream) {
-                video.srcObject = stream;
-                video.play();
-                self.video = video;
-                self.stream = stream;
-                self.onCameraStartedCallback = callback;
-                video.addEventListener('canplay', onVideoCanPlay, false);
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                    video.play();
+                    self.video = video;
+                    self.stream = stream;
+                    self.onCameraStartedCallback = callback;
+                    video.addEventListener('canplay', onVideoCanPlay, false);
+
+                    self.listCameras(changeCameraCallback);
+                })
+                .catch(function (err) {
+                    self.printError('Camera Error: ' + err.name + ' ' + err.message);
+                });
+        }
+    };
+
+
+    this.listCameras = function (callback) {
+        if (selectedDeviceId != null) return;
+        navigator.mediaDevices.enumerateDevices()
+            .then((devices) => {
+                let sourceSelect = element.querySelector('[data-action=' + options.sourceSelectDom + ']');
+                let sourceSelectPanel = element.querySelector('[data-action=' + options.sourceSelectPanelDom + ']');
+                let videoInputDevices = [];
+                devices.forEach((device) => {
+                    if (device.kind === 'videoinput') {
+                        videoInputDevices.push(device);
+                    }
+                });
+                if (options.deviceID != null) {
+                    selectedDeviceId = options.deviceID
+                } else if (videoInputDevices.length > 1) {
+                    selectedDeviceId = videoInputDevices[1].deviceId
+                } else {
+                    selectedDeviceId = videoInputDevices[0].deviceId
+                }
+                if (videoInputDevices.length > 1) {
+                    sourceSelect.innerHTML = '';
+                    devices.forEach((device) => {
+                        if (device.kind === 'videoinput') {
+                            if (options.debug) console.log(`${device.label} id = ${device.deviceId}`);
+                            const sourceOption = document.createElement('option');
+                            if (device.label === '') {
+                                sourceOption.text = 'Camera' + (sourceSelect.length + 1);
+                            } else {
+                                sourceOption.text = device.label
+                            }
+                            sourceOption.value = device.deviceId
+                            if (selectedDeviceId != null && device.deviceId == selectedDeviceId) {
+                                sourceOption.selected = true;
+                            }
+                            sourceSelect.appendChild(sourceOption)
+                        }
+                    });
+
+                    sourceSelect.onchange = () => {
+                        selectedDeviceId = sourceSelect.value;
+                        if (options.debug) console.log(`selectedDevice: ${sourceSelect.options[sourceSelect.selectedIndex].text} id = ${sourceSelect.value}`);
+                        instance.invokeMethodAsync('SelectDeviceID', selectedDeviceId);
+                        callback(selectedDeviceId);
+                    }
+
+                    sourceSelectPanel.style.display = 'block'
+
+                }
             })
-            .catch(function(err) {
-                self.printError('Camera Error: ' + err.name + ' ' + err.message);
+            .catch((err) => {
+                console.error(`${err.name}: ${err.message}`);
             });
     };
 
-    this.stopCamera = function() {
+    this.stopCamera = function () {
         if (this.video) {
             this.video.pause();
             this.video.srcObject = null;
