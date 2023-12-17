@@ -16,11 +16,12 @@ public class WxQrCodeOption
 
     public string OpenCvUrl { get; set; } = "/_content/BootstrapBlazor.ImageHelper/qr/opencv452.js";
 
-    public string fileInputDom { get; set; } = "fileInput";
+    public string CaptureDom { get; set; } = "captureInput";
+
+    public string FileInputDom { get; set; } = "fileInput";
 
     public string ImageDataDom { get; set; } = "imageSrc";
 
-    public string CanvasDom { get; set; } = "canvasOutput";
     public string VideoInputDom { get; set; } = "videoInput";
     public string StartAndStopDom { get; set; } = "startAndStop";
     public string ErrorOutputDom { get; set; } = "errorMessage";

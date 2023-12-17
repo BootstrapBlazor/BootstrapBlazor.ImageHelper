@@ -5,29 +5,24 @@ let element = null;
 let instance = null;
 let options = null;
 let supportsVibrate = false;
-let timeIds = -1;
 
 export function init(_instance, _element, _options) {
     options = _options;
     instance = _instance;
     element = _element;
     supportsVibrate = "vibrate" in navigator;
-    let inCanvas = element.querySelector('#' + options.imageDataDom);
-    let outCanvas = element.querySelector('#' + options.canvasDom);
     let inputElement = element.querySelector('#' + options.fileInputDom);
-    outCanvas.height = 0;
-    outCanvas.width = 0;
+    let captureElement = element.querySelector('#' + options.captureDom);
+
+    captureElement.addEventListener('change', (e) => {
+        img.src = URL.createObjectURL(e.target.files[0]);
+    }, false);
 
     inputElement.addEventListener('change', (e) => {
         img.src = URL.createObjectURL(e.target.files[0]);
     }, false);
 
     img.onload = function () {
-        outCanvas.height = 0;
-        outCanvas.width = 0;
-        //变形的拉伸才能用
-        //let inCanvasCtx = inCanvas.getContext('2d')
-        //inCanvasCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 400, 400);
         let mat = cv.imread(img);
         cv.imshow(options.imageDataDom, mat);
         mat.delete();
@@ -48,14 +43,13 @@ export function init(_instance, _element, _options) {
                             mod = 'sr.prototxt';
                             utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
                                 loadingQr = false;
-                                instance.invokeMethodAsync('GetResult', '加载模型文件完成');
                                 qrcode_detector = new cv.wechat_qrcode_WeChatQRCode(
                                     "detect.prototxt",
                                     "detect.caffemodel",
                                     "sr.prototxt",
                                     "sr.caffemodel"
                                 );
-                                //wechatQrcode(instance, element, imageDataDom, canvasDom);
+                                instance.invokeMethodAsync('GetResult', '加载模型文件完成');
                             });
                         });
                     });
@@ -353,7 +347,7 @@ export function wechatQrcodeCamera(instance, element, _options) {
     let streaming = false;
     let videoInput = element.querySelector('#' + _options.videoInputDom);
     let startAndStop = element.querySelector('#' + _options.startAndStopDom);
-    let canvasOutput = element.querySelector('#' + _options.canvasDom);
+    let canvasOutput = element.querySelector('#' + _options.imageDataDom);
     let canvasContext = canvasOutput.getContext('2d');
 
     let video = element.querySelector('#' + _options.videoInputDom);
@@ -363,6 +357,8 @@ export function wechatQrcodeCamera(instance, element, _options) {
     let cap = new cv.VideoCapture(video);
     let points_vec = new cv.MatVector();
     const FPS = 30;
+    canvasOutput.height = 0;
+    canvasOutput.width = 0;
 
     utils.startCamera('vga', onVideoStarted, _options.videoInputDom, _options.deviceID, onChangeCamera);
 
@@ -383,7 +379,6 @@ export function wechatQrcodeCamera(instance, element, _options) {
                 src.delete();
                 dst.delete();
                 gray.delete();
-                qrcode_detector.delete(); 
                 return;
             }
             let begin = Date.now();
@@ -416,18 +411,24 @@ export function wechatQrcodeCamera(instance, element, _options) {
             }
             // schedule the next one.
             let delay = 1000 / FPS - (Date.now() - begin);
-            timeIds = setTimeout(processVideo, delay);
+            setTimeout(processVideo, delay);
         } catch (err) {
             utils.printError(err);
         }
     };
 
     function onVideoStarted() {
+        src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+        dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+        gray = new cv.Mat();
+        cap = new cv.VideoCapture(video);
+        points_vec = new cv.MatVector();
+
         streaming = true;
         startAndStop.innerText = 'Stop';
         videoInput.width = videoInput.videoWidth;
         videoInput.height = videoInput.videoHeight;
-        timeIds = setTimeout(processVideo, 0);
+        setTimeout(processVideo, 0);
     }
 
     function onChangeCamera(selectedDeviceId) {
@@ -438,9 +439,10 @@ export function wechatQrcodeCamera(instance, element, _options) {
 
     function onVideoStopped() {
         streaming = false;
-        canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
+        canvasOutput.height = 0;
+        canvasOutput.width = 0;
+        //canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
         startAndStop.innerText = 'Start';
-        clearTimeout(timeIds);
     }
 
 }
