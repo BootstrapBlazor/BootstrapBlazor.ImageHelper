@@ -13,6 +13,9 @@ export function init(_instance, _element, _options) {
     supportsVibrate = "vibrate" in navigator;
     let inputElement = element.querySelector('#' + options.fileInputDom);
     let captureElement = element.querySelector('#' + options.captureDom);
+    let canvasOutput = element.querySelector('#' + _options.imageDataDom);
+    canvasOutput.height = 0;
+    canvasOutput.width = 0;
 
     captureElement.addEventListener('change', (e) => {
         img.src = URL.createObjectURL(e.target.files[0]);
@@ -116,8 +119,6 @@ function isLoadImage() {
 
 export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     let self = this;
-    let sourceSelect = null;
-    let sourceSelectPanel = null;
     let selectedDeviceId = null;
 
     this.errorOutput = element.querySelector('#' + errorOutputId);
@@ -243,8 +244,8 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         if (selectedDeviceId != null) return;
         navigator.mediaDevices.enumerateDevices()
             .then((devices) => {
-                sourceSelect = element.querySelector('[data-action=' + options.sourceSelectDom + ']');
-                sourceSelectPanel = element.querySelector('[data-action=' + options.sourceSelectPanelDom + ']');
+                let sourceSelect = element.querySelector('[data-action=' + options.sourceSelectDom + ']');
+                let sourceSelectPanel = element.querySelector('[data-action=' + options.sourceSelectPanelDom + ']');
                 let videoInputDevices = [];
                 devices.forEach((device) => {
                     if (device.kind === 'videoinput') {
@@ -282,8 +283,6 @@ export function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
                         if (options.debug) console.log(`selectedDevice: ${sourceSelect.options[sourceSelect.selectedIndex].text} id = ${sourceSelect.value}`);
                         instance.invokeMethodAsync('SelectDeviceID', selectedDeviceId);
                         callback(selectedDeviceId);
-                        //this.stopCamera();
-                        //this.startCamera(selectedDeviceId);
                     }
 
                     sourceSelectPanel.style.display = 'block'
@@ -348,29 +347,29 @@ export function wechatQrcodeCamera(instance, element, _options) {
     let videoInput = element.querySelector('#' + _options.videoInputDom);
     let startAndStop = element.querySelector('#' + _options.startAndStopDom);
     let canvasOutput = element.querySelector('#' + _options.imageDataDom);
-    let canvasContext = canvasOutput.getContext('2d');
-
     let video = element.querySelector('#' + _options.videoInputDom);
-    let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
-    let dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
-    let gray = new cv.Mat();
-    let cap = new cv.VideoCapture(video);
-    let points_vec = new cv.MatVector();
+    let src;
+    let dst;
+    let gray;
+    let cap;
+    let points_vec;
     const FPS = 30;
     canvasOutput.height = 0;
     canvasOutput.width = 0;
-
+    let retry = true;
     utils.startCamera('vga', onVideoStarted, _options.videoInputDom, _options.deviceID, onChangeCamera);
 
-    startAndStop.addEventListener('click', () => {
-        if (!streaming) {
+    startAndStop.addEventListener('click', () => onToggleCamera());
+
+    function onToggleCamera() {
+         if (!streaming) {
             utils.clearError();
             utils.startCamera('vga', onVideoStarted, _options.videoInputDom, _options.deviceID, onChangeCamera);
         } else {
             utils.stopCamera();
             onVideoStopped();
         }
-    });
+   }
 
     function processVideo() {
         try {
@@ -414,6 +413,11 @@ export function wechatQrcodeCamera(instance, element, _options) {
             setTimeout(processVideo, delay);
         } catch (err) {
             utils.printError(err);
+            if (retry) {
+                retry = false; 
+                setTimeout(onToggleCamera(), 100);
+                setTimeout(onToggleCamera(), 0);
+            }
         }
     };
 
@@ -441,7 +445,6 @@ export function wechatQrcodeCamera(instance, element, _options) {
         streaming = false;
         canvasOutput.height = 0;
         canvasOutput.width = 0;
-        //canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
         startAndStop.innerText = 'Start';
     }
 
