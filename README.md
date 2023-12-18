@@ -5,9 +5,9 @@
 
 示例:
 
-https://www.blazor.zone/ImageHelpers
-
 https://blazor.app1.es/ImageHelpers
+
+https://blazor.app1.es/WxQrCodes
 
 使用方法:
 
