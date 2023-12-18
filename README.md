@@ -45,6 +45,8 @@ OpenCV 深度神经网络（DNN）深度学习框架模型
 因为模型比较大,请自行下载后放入wwwroot下的models\face文件夹中. 
 由于默认blazor并没有启用 .caffemodel和.pb文件的静态文件访问,为了简单起见,全都添加.txt后缀名.
 
+![image](https://github.com/densen2014/BootstrapBlazor.ImageHelper/assets/8428709/b6ef0a00-4c0c-4bac-936d-e46abc590b2e)
+
 
 OpenCV 为此面部检测器提供了两种模型：
 
