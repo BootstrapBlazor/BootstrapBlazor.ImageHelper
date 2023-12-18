@@ -38,7 +38,29 @@ opencv.js是opencv利用了emscripten将原本的C++版本编译成了WebAssembl
 
 <p>这是c++的库转wasm(运行在客户端) ,当然ssr也能用, 语法全部用opencv的c++版本, 由于本人精力有限, 不能一一封装所有的功能, 欢迎有兴趣的小伙伴一起<a href="https://github.com/densen2014/BootstrapBlazor.ImageHelper">[参与项目]</a></p>
 
-参考资料:
+#### 特别说明
+
+OpenCV 深度神经网络（DNN）深度学习框架模型
+
+因为模型比较大,请自行下载后放入wwwroot下的models\face文件夹中. 
+由于默认blazor并没有启用 .caffemodel和.pb文件的静态文件访问,为了简单起见,全都添加.txt后缀名.
+
+
+OpenCV 为此面部检测器提供了两种模型：
+
+- 人脸检测器（FP16）：原始 Caffe 实现的浮点 16 版本（5.1 MB） 
+
+    [res10_300x300_ssd_iter_140000_fp16.caffemodel](https://github.com/opencv/opencv_3rdparty/raw/19512576c112aa2c7b6328cb0e8d589a4a90a26d/res10_300x300_ssd_iter_140000_fp16.caffemodel?WT.mc_id=DT-MVP-5005078)
+
+    [deploy.prototxt](https://github.com/opencv/opencv/blob/master/samples/dnn/face_detector/deploy.prototxt?WT.mc_id=DT-MVP-5005078)
+
+- 人脸检测器（UINT8）：使用 TensorFlow 的 8 位量化版本（2.6 MB）
+ 
+    [opencv_face_detector_uint8.pb](https://github.com/opencv/opencv_3rdparty/raw/8033c2bc31b3256f0d461c919ecc01c2428ca03b/opencv_face_detector_uint8.pb?WT.mc_id=DT-MVP-5005078)
+
+    [opencv_face_detector.pbtxt](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/opencv_face_detector.pbtxt?WT.mc_id=DT-MVP-5005078)
+
+#### 参考资料:
 
 1. 人脸识别 https://docs.opencv.org/4.x/d2/d99/tutorial_js_face_detection.html
 
