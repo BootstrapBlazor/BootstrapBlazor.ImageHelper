@@ -9,6 +9,8 @@ https://blazor.app1.es/ImageHelpers
 
 https://blazor.app1.es/WxQrCodes
 
+微信扫码是特别编译的opencv所以这两个页面打开请F5重新刷新加载库文件
+
 使用方法:
 
 1.nuget包
