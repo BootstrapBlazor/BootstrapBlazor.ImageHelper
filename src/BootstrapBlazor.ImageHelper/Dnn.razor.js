@@ -7,6 +7,7 @@ let qrcode_detector;
 let element = null;
 let instance = null;
 let options = null;
+let utilsDnn = null;
 
 export function init(_instance, _element, _options) {
     options = _options;
@@ -16,11 +17,13 @@ export function init(_instance, _element, _options) {
     let captureElement = element.querySelector('#' + options.captureDom);
     let canvasOutput = element.querySelector('#' + _options.imageDataDom);
     let utils = new Utils(instance, element, options);
+    utilsDnn = new UtilsDnn(instance, element, options);
     canvasOutput.height = 0;
     canvasOutput.width = 0;
 
     inputElement.addEventListener('change', (e) => {
-        img.src = URL.createObjectURL(e.target.files[0]);
+        utilsDnn.loadImageToCanvas(e, options.imageDataDom);
+        //img.src = URL.createObjectURL(e.target.files[0]);
     }, false);
 
     captureElement.addEventListener('change', (e) => {
@@ -31,7 +34,7 @@ export function init(_instance, _element, _options) {
         let mat = cv.imread(img);
         cv.imshow(options.imageDataDom, mat);
         mat.delete();
-        wechatQrcode452(instance, element, _options);
+        obj_detection(instance, element, _options);
     };
 
     addScript(options.openCvUrl).then(
@@ -71,13 +74,12 @@ function isLoadImage() {
     return true
 }
 
-export function wechatQrcode452(instance, element, _options) {
+export function obj_detection(instance, element, _options) {
     if (!isLoadImage()) return;
 
     console.time("OpenCV耗时");
-    let utils = new UtilsDnn(instance, element, options);
 
-    setTimeout(utils.main, 1);
+    setTimeout(utilsDnn.main, 1);
 
     console.timeEnd("OpenCV耗时");
 }
