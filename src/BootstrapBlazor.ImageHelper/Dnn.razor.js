@@ -1,5 +1,5 @@
 ﻿import { vibrate, addScript, Utils } from '/_content/BootstrapBlazor.ImageHelper/utils.js'
-import { UtilsDnn } from '/_content/BootstrapBlazor.ImageHelper/UtilsDnn.js'
+import { UtilsDnn } from '/_content/BootstrapBlazor.ImageHelper/utilsdnn.js'
 
 let loadingQr = true;
 let img = new Image();
