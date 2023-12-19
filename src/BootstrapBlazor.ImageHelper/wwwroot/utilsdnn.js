@@ -80,7 +80,7 @@
     this.loadImageToCanvas = function (e, canvasId) {
         let files = e.target.files;
         let imgUrl = URL.createObjectURL(files[0]);
-        let canvas = document.getElementById(canvasId);
+        let canvas = element.querySelector('#' + canvasId);
         let ctx = canvas.getContext('2d');
         let img = new Image();
         img.crossOrigin = 'anonymous';
@@ -93,7 +93,7 @@
     this.drawInfoTable = async function (jsonUrl, divId) {
         let response = await fetch(jsonUrl);
         let json = await response.json();
-        let appendix = document.getElementById(divId);
+        let appendix = element.querySelector('#' + divId);
         for (key of Object.keys(json)) {
             let h3 = document.createElement('h3');
             h3.textContent = key + " model";
@@ -150,10 +150,10 @@
 
     function updateResult(output, time) {
         try {
-            let canvasOutput = document.getElementById('canvasOutput');
+            let canvasOutput = element.querySelector('#' + 'canvasOutput');
             canvasOutput.style.visibility = "visible";
             cv.imshow('canvasOutput', output);
-            document.getElementById('status').innerHTML = `<b>Model:</b> ${modelPath}<br>
+            element.querySelector('#' + 'status').innerHTML = `<b>Model:</b> ${modelPath}<br>
                                                            <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch (e) {
             console.log(e);
@@ -161,13 +161,13 @@
     }
 
     function initStatus() {
-        document.getElementById('status').innerHTML = '';
-        document.getElementById('canvasOutput').style.visibility = "hidden";
+        element.querySelector('#' + 'status').innerHTML = '';
+        element.querySelector('#' + 'canvasOutput').style.visibility = "hidden";
         utils.clearError();
     }
 
     this.postProcess = function (result, labels) {
-        let canvasOutput = document.getElementById('canvasOutput');
+        let canvasOutput = element.querySelector('#' + 'canvasOutput');
         const outputWidth = canvasOutput.width;
         const outputHeight = canvasOutput.height;
         const resultData = result.data32F;
