@@ -18,16 +18,17 @@ export function init(_instance, _element, _options) {
     let canvasOutput = element.querySelector('#' + _options.imageDataDom);
     let utils = new Utils(instance, element, options);
     utilsDnn = new UtilsDnn(instance, element, options);
-    canvasOutput.height = 0;
-    canvasOutput.width = 0;
+    //canvasOutput.height = 0;
+    //canvasOutput.width = 0;
 
     inputElement.addEventListener('change', (e) => {
-        utilsDnn.loadImageToCanvas(e, options.imageDataDom);
+        utilsDnn.loadImageToCanvas(e, options.imageDataDom, obj_detection(instance, element, _options));
         //img.src = URL.createObjectURL(e.target.files[0]);
     }, false);
 
     captureElement.addEventListener('change', (e) => {
-        img.src = URL.createObjectURL(e.target.files[0]);
+        utilsDnn.loadImageToCanvas(e, options.imageDataDom, obj_detection(instance, element, _options));
+        //img.src = URL.createObjectURL(e.target.files[0]); 
     }, false);
 
     img.onload = function () {
@@ -75,7 +76,7 @@ function isLoadImage() {
 }
 
 export function obj_detection(instance, element, _options) {
-    if (!isLoadImage()) return;
+    //if (!isLoadImage()) return;
 
     console.time("OpenCV耗时");
 

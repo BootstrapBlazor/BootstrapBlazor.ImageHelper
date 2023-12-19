@@ -77,7 +77,7 @@
         return classes;
     }
 
-    this.loadImageToCanvas = function (e, canvasId) {
+    this.loadImageToCanvas = function (e, canvasId,callback) {
         let files = e.target.files;
         let imgUrl = URL.createObjectURL(files[0]);
         let canvas = element.querySelector('#' + canvasId);
@@ -87,6 +87,7 @@
         img.src = imgUrl;
         img.onload = function () {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            //callback();
         };
     }
 
