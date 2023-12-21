@@ -76,13 +76,13 @@ function isLoadImage() {
 }
 
 export function obj_detection(instance, element, _options) {
-    //if (!isLoadImage()) return;
-
-    console.time("OpenCV耗时");
-
     setTimeout(utilsDnn.main, 1);
+}
 
-    console.timeEnd("OpenCV耗时");
+
+export function obj_detection_camera(instance, element, _options) {
+    //if (!isLoadImage()) return;
+    setTimeout(utilsDnn.main, 1);
 }
 
  

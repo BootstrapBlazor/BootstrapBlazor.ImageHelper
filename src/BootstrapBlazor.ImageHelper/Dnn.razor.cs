@@ -144,7 +144,7 @@ public partial class Dnn : IAsyncDisposable
         Message =string.Empty;
         try
         {
-            await Module!.InvokeVoidAsync("wechatQrcode452", Instance, Element, Options);
+            await Module!.InvokeVoidAsync("obj_detection", Instance, Element, Options);
         }
         catch (Exception ex)
         {
@@ -154,13 +154,13 @@ public partial class Dnn : IAsyncDisposable
         }
     }
 
-    public virtual async Task Scan()
+    public virtual async Task Camera()
     {
         if (FirstRender) return;
         Message =string.Empty;
         try
         {
-            await Module!.InvokeVoidAsync("wechatQrcodeCamera", Instance, Element, Options);
+            await Module!.InvokeVoidAsync("obj_detection_camera", Instance, Element, Options);
         }
         catch (Exception ex)
         {
