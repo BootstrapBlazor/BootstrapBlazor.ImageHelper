@@ -69,6 +69,12 @@ public class ImageHelperOptionBase
     public bool AutoCaputeCrop { get; set; } = true;
 
     /// <summary>
+    /// 二次剪裁
+    /// </summary>
+    [DisplayName("二次剪裁")]
+    public bool Retry { get; set; } = true;
+
+    /// <summary>
     /// 显示log
     /// </summary>
     [DisplayName("显示log")]

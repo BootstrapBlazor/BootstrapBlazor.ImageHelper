@@ -28,7 +28,7 @@ export function init(_instance, _element, _options) {
 
     img.onload = function () {
         let src = cv.imread(img);
-        src = cutImage(src, src, cv);
+        src = cutImage(src, src);
         cv.imshow(options.imageDataDom, src);
         src.delete();
         wechatQrcode452(instance, element, _options);
@@ -74,19 +74,24 @@ export function init(_instance, _element, _options) {
 
 }
 
-function cutImage(src, dst) {
-    if ((src.rows / src.cols) > 1.2) {
-        //比例不对, 截取中间部分
-        let rect = new cv.Rect(0, (src.rows - src.cols) / 2, src.cols, src.cols);
-        dst = src.roi(rect);
-    } else if ((src.cols / src.rows) > 1.2) {
-        //比例不对, 截取中间部分
-        let rect = new cv.Rect((src.cols - src.rows) / 2, 0, src.rows, src.rows);
-        dst = src.roi(rect);
+function cutImage(src, dst, width = 600) {
+    if (options.autoCaputeCrop) {
+        if ((src.rows / src.cols) > 1.2) {
+            //比例不对, 截取中间部分
+            let rect = new cv.Rect(0, (src.rows - src.cols) / 2, src.cols, src.cols);
+            dst = src.roi(rect);
+        } else if ((src.cols / src.rows) > 1.2) {
+            //比例不对, 截取中间部分
+            let rect = new cv.Rect((src.cols - src.rows) / 2, 0, src.rows, src.rows);
+            dst = src.roi(rect);
+        }
+        if (dst.rows > 600) {
+            cv.resize(dst, dst, new cv.Size(width, width));
+        }
+        return dst;
     } else {
-        cv.resize(src, dst, new cv.Size(600, 600));
+        return src;
     }
-    return dst;
 }
 function isLoadImage() {
     if (!img.src) {
@@ -96,8 +101,9 @@ function isLoadImage() {
     return true
 }
 
-export function wechatQrcode452(instance, element, _options) {
+export function wechatQrcode452(instance, element, _options, retry = true) {
     if (!isLoadImage()) return;
+    options = _options;
 
     console.time("OpenCV耗时");
     let imageData = element.querySelector('#' + _options.imageDataDom);
@@ -115,13 +121,22 @@ export function wechatQrcode452(instance, element, _options) {
 
     const rects = []
     let temp = inputImage
-    for (let j = 0; j < points_vec.size(); j += 1) {
-        let rect = cv.boundingRect(points_vec.get(j))
-        rects.push(rect)
+    if (arr.length > 0) {
+        vibrate();
+        for (let j = 0; j < points_vec.size(); j += 1) {
+            let rect = cv.boundingRect(points_vec.get(j))
+            rects.push(rect)
 
-        let point1 = new cv.Point(rect.x, rect.y);
-        let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
-        cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
+            let point1 = new cv.Point(rect.x, rect.y);
+            let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+            cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
+        }
+    } else if (retry && options.retry) {
+        let rect = new cv.Rect(temp.rows / 2, temp.rows / 2, temp.rows / 2, temp.rows / 2);
+        temp = temp.roi(rect);
+        cv.imshow(options.imageDataDom, temp);
+        console.log(`取中间区域再试一次`);
+        wechatQrcode452(instance, element, _options, false);
     }
     cv.imshow(_options.imageDataDom, temp)
 
@@ -130,6 +145,7 @@ export function wechatQrcode452(instance, element, _options) {
 
 
 export function wechatQrcodeCamera(instance, element, _options) {
+    options = _options;
     let utils = new Utils(instance, element, _options);
 
     let streaming = false;
@@ -196,6 +212,33 @@ export function wechatQrcodeCamera(instance, element, _options) {
                     cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
                 }
                 cv.imshow(_options.imageDataDom, temp)
+            } else if (options.retry) {
+                let rect = new cv.Rect(gray.rows / 2, gray.rows / 2, gray.rows / 2, gray.rows / 2);
+                gray = gray.roi(rect);
+                cv.imshow(options.imageDataDom, gray);
+                console.log(`取中间区域再试一次`);
+                res = qrcode_detector.detectAndDecode(gray, points_vec);
+                i = 0
+                arr = []
+                while (i < res.size()) {
+                    arr.push(res.get(i++))
+                }
+                console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
+                if (arr.length > 0) {
+                    instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
+                    vibrate();
+                    const rects = []
+                    let temp = dst
+                    for (let j = 0; j < points_vec.size(); j += 1) {
+                        let rect = cv.boundingRect(points_vec.get(j))
+                        rects.push(rect)
+
+                        let point1 = new cv.Point(rect.x, rect.y);
+                        let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+                        cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
+                    }
+                    cv.imshow(_options.imageDataDom, temp)
+                }
             }
             // schedule the next one.
             let delay = 1000 / FPS - (Date.now() - begin);

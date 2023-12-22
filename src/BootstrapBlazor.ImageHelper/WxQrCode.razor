@@ -17,6 +17,7 @@
                 <Button Text="扫码" OnClickWithoutRender="Scan" IsDisabled="@IsCameraBusy" />
                 <Button Id="@Options.StartAndStopDom" Text="无" IsDisabled="@(!IsCameraBusy)" />
                 <Switch Width="75" ShowInnerText="true" OnInnerText="居中剪裁" OffInnerText="不剪裁" @bind-Value="@Options.AutoCaputeCrop" />
+                <Switch Width="75" ShowInnerText="true" OnInnerText="自动重试" OffInnerText="不重试" @bind-Value="@Options.AutoCaputeCrop" />
             }
         </div>
         <div class="inputoutput col-12 col-sm-6">
