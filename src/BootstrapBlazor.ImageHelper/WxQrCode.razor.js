@@ -213,7 +213,7 @@ export function wechatQrcodeCamera(instance, element, _options) {
                 }
                 cv.imshow(_options.imageDataDom, temp)
             } else if (options.retry) {
-                let rect = new cv.Rect(gray.rows / 2, gray.rows / 2, gray.rows / 2, gray.rows / 2);
+                let rect = new cv.Rect(gray.rows / 4, gray.rows / 4, gray.rows / 2, gray.rows / 2);
                 gray = gray.roi(rect);
                 cv.imshow(options.imageDataDom, gray);
                 console.log(`取中间区域再试一次`);
