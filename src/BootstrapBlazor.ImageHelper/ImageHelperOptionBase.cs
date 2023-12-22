@@ -63,6 +63,12 @@ public class ImageHelperOptionBase
     public int Height { get; set; } = 480;
 
     /// <summary>
+    /// 自动裁剪图像,只要居中区域
+    /// </summary>
+    [DisplayName("显示log")]
+    public bool AutoCaputeCrop { get; set; } = true;
+
+    /// <summary>
     /// 显示log
     /// </summary>
     [DisplayName("显示log")]

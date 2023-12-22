@@ -8,10 +8,10 @@
     const confThreshold = 0.5;
     const nmsThreshold = 0.4;
 
-    // The type of output, can be YOLO or SSD
+    // The type of output, can be YOLO or SSD 输出的类型，可以是YOLO或SSD
     const outType = "SSD";
 
-    // url for label file, can from local or Internet
+    // url for label file, can from local or Internet 标签文件的 url，可以来自本地或互联网
     const labelsUrl = "https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/dnn/object_detection_classes_pascal_voc.txt";
 
     this.getBlobFromImage = function (inputSize, mean, std, swapRB, image) {
@@ -173,7 +173,7 @@
         const outputHeight = canvasOutput.height;
         const resultData = result.data32F;
 
-        // Get the boxes(with class and confidence) from the output
+        // Get the boxes(with class and confidence) from the output 从输出中获取框（具有类别和置信度）
         let boxes = [];
         switch (outType) {
             case "YOLO": {
@@ -205,7 +205,7 @@
                     }
                 }
 
-                // NMS(Non Maximum Suppression) algorithm
+                // NMS(Non Maximum Suppression) algorithm NMS（非极大值抑制）算法
                 let boxNum = boxes.length;
                 let tmp_boxes = [];
                 let sorted_boxes = [];
@@ -263,7 +263,7 @@
                 console.error(`Unsupported output type ${outType}`)
         }
 
-        // Draw the saved box into the image
+        // Draw the saved box into the image 将保存的框绘制到图像中
         let image = cv.imread("imageSrc");
         let output = new cv.Mat(outputWidth, outputHeight, cv.CV_8UC3);
         cv.cvtColor(image, output, cv.COLOR_RGBA2RGB);
@@ -277,7 +277,7 @@
         return output;
 
 
-        // Calculate the IOU(Intersection over Union) of two boxes
+        // Calculate the IOU(Intersection over Union) of two boxes 计算两个盒子的 IOU 
         function IOU(box1, box2) {
             let bounding1 = box1.bounding;
             let bounding2 = box2.bounding;
@@ -300,7 +300,7 @@
             return overlapS / (s1 + s2 + overlapS);
         }
 
-        // Calculate the overlap range of two vector
+        // Calculate the overlap range of two vector 计算两个向量的重叠范围
         function calOverlap(range1, range2) {
             let min1 = range1[0];
             let max1 = range1[1];
@@ -316,7 +316,7 @@
             }
         }
 
-        // Draw one predict box into the origin image
+        // Draw one predict box into the origin image 在原始图像中绘制一个预测框
         function drawBox(box) {
             let bounding = box.bounding;
             let left = bounding[0];

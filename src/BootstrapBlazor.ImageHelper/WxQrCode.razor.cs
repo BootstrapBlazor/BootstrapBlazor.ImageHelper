@@ -49,7 +49,8 @@ public partial class WxQrCode : IAsyncDisposable
     public Func<string, Task>? OnError { get; set; }
 
     private bool IsOpenCVReady { get; set; }
-    private string Status => IsOpenCVReady ? "初始化完成" : "正在初始化...";
+    private bool IsCameraBusy { get; set; }
+    private string Status => IsCameraBusy ? "正在使用摄像头" :  IsOpenCVReady ? "初始化完成" : "正在初始化...";
     private string? Message { get; set; } 
 
     private bool FirstRender { get; set; } = true;
@@ -102,6 +103,15 @@ public partial class WxQrCode : IAsyncDisposable
     public async Task GetReady()
     {
         IsOpenCVReady = true;
+        StateHasChanged();
+        if (OnResult != null)
+            await OnResult.Invoke(Status); 
+    }
+
+    [JSInvokable]
+    public async Task GetCameraBusy(bool busy)
+    {
+        IsCameraBusy = busy;
         StateHasChanged();
         if (OnResult != null)
             await OnResult.Invoke(Status); 

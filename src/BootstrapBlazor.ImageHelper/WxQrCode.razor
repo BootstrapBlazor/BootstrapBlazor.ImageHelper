@@ -7,15 +7,16 @@
     <pre id="@Options.ErrorOutputDom"></pre>
 
     <div class="row g-3">
-        <div>
+        <div col-12 col-sm-6>
             <label class="btn btn-primary" for="@Options.CaptureDom">拍照</label><input type="file" class="sr-only" id="@Options.CaptureDom" name="file" accept="image/*" capture />
             <label class="btn btn-primary" for="@Options.FileInputDom">图片</label><input type="file" class="sr-only" id="@Options.FileInputDom" name="file" accept="image/*" />
             &nbsp;
             @if (IsOpenCVReady)
             {
                 <Button Text="重试解码" OnClickWithoutRender="Apply" />
-                <Button Text="扫码" OnClickWithoutRender="Scan" />
-                <Button Id="@Options.StartAndStopDom" Text="" />
+                <Button Text="扫码" OnClickWithoutRender="Scan" IsDisabled="@IsCameraBusy" />
+                <Button Id="@Options.StartAndStopDom" Text="无" IsDisabled="@(!IsCameraBusy)" />
+                <Switch Width="75" ShowInnerText="true" OnInnerText="居中剪裁" OffInnerText="不剪裁" @bind-Value="@Options.AutoCaputeCrop" />
             }
         </div>
         <div class="inputoutput col-12 col-sm-6">

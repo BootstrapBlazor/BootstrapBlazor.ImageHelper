@@ -27,9 +27,10 @@ export function init(_instance, _element, _options) {
     }, false);
 
     img.onload = function () {
-        let mat = cv.imread(img);
-        cv.imshow(options.imageDataDom, mat);
-        mat.delete();
+        let src = cv.imread(img);
+        src = cutImage(src, src, cv);
+        cv.imshow(options.imageDataDom, src);
+        src.delete();
         wechatQrcode452(instance, element, _options);
     };
 
@@ -73,6 +74,20 @@ export function init(_instance, _element, _options) {
 
 }
 
+function cutImage(src, dst) {
+    if ((src.rows / src.cols) > 1.2) {
+        //比例不对, 截取中间部分
+        let rect = new cv.Rect(0, (src.rows - src.cols) / 2, src.cols, src.cols);
+        dst = src.roi(rect);
+    } else if ((src.cols / src.rows) > 1.2) {
+        //比例不对, 截取中间部分
+        let rect = new cv.Rect((src.cols - src.rows) / 2, 0, src.rows, src.rows);
+        dst = src.roi(rect);
+    } else {
+        cv.resize(src, dst, new cv.Size(600, 600));
+    }
+    return dst;
+}
 function isLoadImage() {
     if (!img.src) {
         alert('请先上传图片')
@@ -87,7 +102,6 @@ export function wechatQrcode452(instance, element, _options) {
     console.time("OpenCV耗时");
     let imageData = element.querySelector('#' + _options.imageDataDom);
     let inputImage = cv.imread(imageData, cv.IMREAD_GRAYSCALE);
-    let dst = new cv.Mat();
     let points_vec = new cv.MatVector();
     let res = qrcode_detector.detectAndDecode(inputImage, points_vec);
     let i = 0
@@ -157,7 +171,8 @@ export function wechatQrcodeCamera(instance, element, _options) {
             let begin = Date.now();
             // start processing.
             cap.read(src);
-            src.copyTo(dst);
+            //src.copyTo(dst);
+            dst = cutImage(src, dst);
             cv.cvtColor(dst, gray, cv.COLOR_RGBA2GRAY, 0);
             let res = qrcode_detector.detectAndDecode(gray, points_vec);
             let i = 0
@@ -207,6 +222,8 @@ export function wechatQrcodeCamera(instance, element, _options) {
         videoInput.width = videoInput.videoWidth;
         videoInput.height = videoInput.videoHeight;
         setTimeout(processVideo, 0);
+        instance.invokeMethodAsync('GetCameraBusy', true);
+
     }
 
     function onChangeCamera(selectedDeviceId) {
@@ -220,6 +237,7 @@ export function wechatQrcodeCamera(instance, element, _options) {
         canvasOutput.height = 0;
         canvasOutput.width = 0;
         startAndStop.innerText = 'Start';
+        instance.invokeMethodAsync('GetCameraBusy', false);
     }
 
 }
