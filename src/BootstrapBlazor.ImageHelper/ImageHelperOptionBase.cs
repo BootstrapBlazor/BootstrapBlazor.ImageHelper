@@ -63,6 +63,12 @@ public class ImageHelperOptionBase
     public int Height { get; set; } = 480;
 
     /// <summary>
+    /// 单次解码
+    /// </summary>
+    [DisplayName("单次解码")]
+    public bool DecodeOnce { get; set; } = true;
+
+    /// <summary>
     /// 自动裁剪图像,只要居中区域
     /// </summary>
     [DisplayName("显示log")]

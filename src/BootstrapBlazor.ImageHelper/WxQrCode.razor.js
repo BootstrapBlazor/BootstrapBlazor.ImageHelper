@@ -28,7 +28,6 @@ export function init(_instance, _element, _options) {
 
     img.onload = function () {
         let src = cv.imread(img);
-        src = cutImage(src, src);
         cv.imshow(options.imageDataDom, src);
         src.delete();
         wechatQrcode452(instance, element, _options);
@@ -101,28 +100,38 @@ function isLoadImage() {
     return true
 }
 
-export function wechatQrcode452(instance, element, _options, retry = true) {
+export function wechatQrcode452(instance, element, _options) {
     if (!isLoadImage()) return;
     options = _options;
-
-    console.time("OpenCV耗时");
     let imageData = element.querySelector('#' + _options.imageDataDom);
-    let inputImage = cv.imread(imageData, cv.IMREAD_GRAYSCALE);
-    let points_vec = new cv.MatVector();
-    let res = qrcode_detector.detectAndDecode(inputImage, points_vec);
+    let inputImage=cv.imread(imageData, cv.IMREAD_GRAYSCALE);
+    detectAndDecode(instance, inputImage, _options);
+}
+
+export function detectAndDecode(instance, inputImage, _options, retry = true,toGray=false) {
+    if (retry && _options.debug) console.time("OpenCV耗时");
     let i = 0
     let arr = []
+    const rects = []
+    let temp = inputImage
+    let points_vec = new cv.MatVector();
+    if (toGray) {
+        //inputImage.copyTo(temp);
+        //cv.cvtColor(inputImage, inputImage, cv.COLOR_RGBA2GRAY, 0);
+    }
+    let res = qrcode_detector.detectAndDecode(inputImage, points_vec);
+
     while (i < res.size()) {
         arr.push(res.get(i++))
     }
     res.delete()
-    console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
+    if (_options.debug) console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
     instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
 
-    const rects = []
-    let temp = inputImage
     if (arr.length > 0) {
-        vibrate();
+        if (options.decodeOnce) {
+            vibrate();
+        }
         for (let j = 0; j < points_vec.size(); j += 1) {
             let rect = cv.boundingRect(points_vec.get(j))
             rects.push(rect)
@@ -132,15 +141,20 @@ export function wechatQrcode452(instance, element, _options, retry = true) {
             cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
         }
     } else if (retry && options.retry) {
-        let rect = new cv.Rect(temp.rows / 2, temp.rows / 2, temp.rows / 2, temp.rows / 2);
-        temp = temp.roi(rect);
-        cv.imshow(options.imageDataDom, temp);
-        console.log(`取中间区域再试一次`);
-        wechatQrcode452(instance, element, _options, false);
+        if (_options.debug) console.log(`截取中间部分试第二次`);
+        cutImage(temp, temp); //尝试截取中间部分再试一次
+
+        if (detectAndDecode(instance, temp, _options, false) == 0) {
+            let rect = new cv.Rect(temp.rows / 2, temp.rows / 2, temp.rows / 2, temp.rows / 2);
+            temp = temp.roi(rect);
+            if (_options.debug) console.log(`截取中间部分试第三次`);
+            detectAndDecode(instance, temp, _options, false)
+        } 
     }
     cv.imshow(_options.imageDataDom, temp)
 
-    console.timeEnd("OpenCV耗时");
+    if (retry && _options.debug) console.timeEnd("OpenCV耗时");
+    return arr.length;
 }
 
 
@@ -156,7 +170,6 @@ export function wechatQrcodeCamera(instance, element, _options) {
     let dst;
     let gray;
     let cap;
-    let points_vec;
     const FPS = 30;
     canvasOutput.height = 0;
     canvasOutput.width = 0;
@@ -187,58 +200,13 @@ export function wechatQrcodeCamera(instance, element, _options) {
             let begin = Date.now();
             // start processing.
             cap.read(src);
-            //src.copyTo(dst);
-            dst = cutImage(src, dst);
-            cv.cvtColor(dst, gray, cv.COLOR_RGBA2GRAY, 0);
-            let res = qrcode_detector.detectAndDecode(gray, points_vec);
-            let i = 0
-            let arr = []
-            while (i < res.size()) {
-                arr.push(res.get(i++))
-            }
-            //res.delete()
-            console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-            if (arr.length > 0) {
-                instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-                vibrate();
-                const rects = []
-                let temp = dst
-                for (let j = 0; j < points_vec.size(); j += 1) {
-                    let rect = cv.boundingRect(points_vec.get(j))
-                    rects.push(rect)
-
-                    let point1 = new cv.Point(rect.x, rect.y);
-                    let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
-                    cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
-                }
-                cv.imshow(_options.imageDataDom, temp)
-            } else if (options.retry) {
-                let rect = new cv.Rect(gray.rows / 4, gray.rows / 4, gray.rows / 2, gray.rows / 2);
-                gray = gray.roi(rect);
-                cv.imshow(options.imageDataDom, gray);
-                console.log(`取中间区域再试一次`);
-                res = qrcode_detector.detectAndDecode(gray, points_vec);
-                i = 0
-                arr = []
-                while (i < res.size()) {
-                    arr.push(res.get(i++))
-                }
-                console.log(`检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-                if (arr.length > 0) {
-                    instance.invokeMethodAsync('GetResult', `检测到 ${arr.length} 个二维码:\r\n` + arr.join('\r\n'));
-                    vibrate();
-                    const rects = []
-                    let temp = dst
-                    for (let j = 0; j < points_vec.size(); j += 1) {
-                        let rect = cv.boundingRect(points_vec.get(j))
-                        rects.push(rect)
-
-                        let point1 = new cv.Point(rect.x, rect.y);
-                        let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
-                        cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
-                    }
-                    cv.imshow(_options.imageDataDom, temp)
-                }
+            src.copyTo(dst);
+            //dst = cutImage(src, dst);
+            //cv.cvtColor(dst, gray, cv.COLOR_RGBA2GRAY, 0);
+            if (detectAndDecode(instance, dst, _options, true, true) != 0 && options.decodeOnce) {
+                utils.stopCamera();
+                onVideoStopped();
+               return;
             }
             // schedule the next one.
             let delay = 1000 / FPS - (Date.now() - begin);
@@ -258,7 +226,6 @@ export function wechatQrcodeCamera(instance, element, _options) {
         dst = new cv.Mat(videoInput.height, videoInput.width, cv.CV_8UC1);
         gray = new cv.Mat();
         cap = new cv.VideoCapture(videoInput);
-        points_vec = new cv.MatVector();
 
         streaming = true;
         startAndStop.innerText = 'Stop';
