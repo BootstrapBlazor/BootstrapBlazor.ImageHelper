@@ -35,7 +35,7 @@ export function addScript(url) {
     });
 }
 
-export function Utils(instance, element,options) { // eslint-disable-line no-unused-vars
+export function Utils(instance, element, options) { // eslint-disable-line no-unused-vars
     let self = this;
     let selectedDeviceId = null;
 
@@ -58,6 +58,46 @@ export function Utils(instance, element,options) { // eslint-disable-line no-unu
         };
         request.send();
     };
+
+    this.initModels = async function (paths, baseurl) {
+        let result = false;
+        await Promise.all(paths.map(async (path) => {
+            let url = baseurl + path + '.txt';
+            let res = await self.createFileFromUrlRequest(path, url);
+            result = res;
+        }));
+        return result;
+    }
+
+    this.createFileFromUrlRequest = function (path, url) {
+        return new Promise((resolve, reject) => {
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.responseType = 'arraybuffer';
+            xhr.onload = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        let data = new Uint8Array(xhr.response);
+                        cv.FS_createDataFile('/', path, data, true, false, false);
+                        resolve(true);
+                    } else {
+                        reject({
+                            status: this.status,
+                            statusText: xhr.statusText,
+                            error: 'Failed to load ' + url + ' status: ' + xhr.status,
+                        });
+                    }
+                }
+            };
+            xhr.onerror = function () {
+                reject({
+                    status: this.status,
+                    statusText: xhr.statusText
+                });
+            };
+            xhr.send();
+        });
+    }
 
     this.clearError = function () {
         this.errorOutput.innerHTML = '';
