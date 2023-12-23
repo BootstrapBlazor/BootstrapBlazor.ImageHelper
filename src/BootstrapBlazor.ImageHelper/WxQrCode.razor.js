@@ -150,7 +150,9 @@ export function detectAndDecode(instance, inputImage, _options, retry = true, to
             detectAndDecode(instance, temp, _options, false)
         }
     }
-    cv.imshow(_options.imageDataDom, temp)
+    if (arr.length > 0) {
+        cv.imshow(_options.imageDataDom, temp)
+    }
 
     if (retry && _options.debug) console.timeEnd("OpenCV耗时");
     return arr.length;
