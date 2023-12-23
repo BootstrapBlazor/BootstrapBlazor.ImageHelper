@@ -34,30 +34,29 @@ export function init(_instance, _element, _options) {
     };
 
     addScript(options.openCvUrl).then(
-        () => {
+        async () => {
             if (loadingQr) {
-                let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
-                let mod = 'detect.caffemodel';
-                utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                    mod = 'detect.prototxt';
-                    utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                        mod = 'sr.caffemodel';
-                        utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                            mod = 'sr.prototxt';
-                            utils.createFileFromUrl(mod, baseurl + mod + '.txt', () => {
-                                loadingQr = false;
-                                qrcode_detector = new cv.wechat_qrcode_WeChatQRCode(
-                                    "detect.prototxt",
-                                    "detect.caffemodel",
-                                    "sr.prototxt",
-                                    "sr.caffemodel"
-                                );
-                                instance.invokeMethodAsync('GetResult', '加载模型文件完成');
-                            });
-                        });
-                    });
-                });
                 instance.invokeMethodAsync('GetResult', '正在加载模型文件');
+                let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
+                let mods = [
+                    "detect.prototxt",
+                    "detect.caffemodel",
+                    "sr.prototxt",
+                    "sr.caffemodel"
+                ];
+                let result = await utils.initModels(mods, baseurl);
+                if (result) {
+                    loadingQr = false;
+                    qrcode_detector = new cv.wechat_qrcode_WeChatQRCode(
+                        "detect.prototxt",
+                        "detect.caffemodel",
+                        "sr.prototxt",
+                        "sr.caffemodel"
+                    );
+                    instance.invokeMethodAsync('GetResult', '加载模型文件完成');
+                } else {
+                    instance.invokeMethodAsync('GetResult', '加载模型文件失败');
+                }
             }
 
             function onOpenCvReady() {
@@ -104,11 +103,11 @@ export function wechatQrcode452(instance, element, _options) {
     if (!isLoadImage()) return;
     options = _options;
     let imageData = element.querySelector('#' + _options.imageDataDom);
-    let inputImage=cv.imread(imageData, cv.IMREAD_GRAYSCALE);
+    let inputImage = cv.imread(imageData, cv.IMREAD_GRAYSCALE);
     detectAndDecode(instance, inputImage, _options);
 }
 
-export function detectAndDecode(instance, inputImage, _options, retry = true,toGray=false) {
+export function detectAndDecode(instance, inputImage, _options, retry = true, toGray = false) {
     if (retry && _options.debug) console.time("OpenCV耗时");
     let i = 0
     let arr = []
@@ -138,18 +137,18 @@ export function detectAndDecode(instance, inputImage, _options, retry = true,toG
 
             let point1 = new cv.Point(rect.x, rect.y);
             let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
-            cv.rectangle(temp, point1, point2, [255, 0, 0, 255]);
+            cv.rectangle(temp, point1, point2, [255, 0, 0, 255], 2);
         }
     } else if (retry && options.retry) {
         if (_options.debug) console.log(`截取中间部分试第二次`);
-        cutImage(temp, temp); //尝试截取中间部分再试一次
+        temp = cutImage(temp, temp); //尝试截取中间部分再试一次
 
         if (detectAndDecode(instance, temp, _options, false) == 0) {
             let rect = new cv.Rect(temp.rows / 2, temp.rows / 2, temp.rows / 2, temp.rows / 2);
             temp = temp.roi(rect);
             if (_options.debug) console.log(`截取中间部分试第三次`);
             detectAndDecode(instance, temp, _options, false)
-        } 
+        }
     }
     cv.imshow(_options.imageDataDom, temp)
 
@@ -206,7 +205,7 @@ export function wechatQrcodeCamera(instance, element, _options) {
             if (detectAndDecode(instance, dst, _options, true, true) != 0 && options.decodeOnce) {
                 utils.stopCamera();
                 onVideoStopped();
-               return;
+                return;
             }
             // schedule the next one.
             let delay = 1000 / FPS - (Date.now() - begin);
