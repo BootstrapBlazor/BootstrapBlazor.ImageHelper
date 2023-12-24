@@ -1,12 +1,13 @@
 ﻿export function UtilsDnn(instance, element, options) { // eslint-disable-line no-unused-vars
     let self = this;
 
-    const inputSize = [300, 300];
-    const mean = [127.5, 127.5, 127.5];
-    const std = 0.007843;
-    const swapRB = false;
+    let inputSize = [300, 300];
+    let mean = [127.5, 127.5, 127.5];
+    let std = 0.007843;
+    let swapRB = false;
     const confThreshold = 0.5;
     const nmsThreshold = 0.4;
+    let threshold = 0.1;
 
     // The type of output, can be YOLO or SSD 输出的类型，可以是YOLO或SSD
     const outType = "SSD";
@@ -136,6 +137,13 @@
     this.main = async function (mods = ['mobilenet_iter_73000.caffemodel', 'mobilenet_iter_deploy.prototxt'], type = 0) {
         instance.invokeMethodAsync('GetResult', '运行检测中...');
         const labels = await self.loadLables(labelsUrl);
+        if (type == 2) {
+            inputSize = [368, 368];
+            mean = [0, 0, 0];
+            std = 0.00392;
+            swapRB = false;
+            threshold = 0.1;
+        }
         const input = self.getBlobFromImage(inputSize, mean, std, swapRB, options.imageDataDom);
         let configPath = "";
         if (mods.length === 2) {
@@ -384,7 +392,7 @@
 
     let BODY_PARTS = {};
     let POSE_PAIRS = [];
-    this.postProcessPoseEstimation = function (result) {
+    this.postProcessPoseEstimation = function (result, dataset ='COCO') {
 
         if (dataset === 'COCO') {
             BODY_PARTS = {
@@ -445,7 +453,8 @@
         let canvasOutput = element.querySelector('#' + options.canvasOutputDom);
         const outputWidth = canvasOutput.width;
         const outputHeight = canvasOutput.height;
-
+        let heatMap, index;
+        let partFrom, partTo, idFrom, idTo, pointFrom, pointTo, x, y, indexX, indexY, pair;
         let image = cv.imread("imageSrc");
         let output = new cv.Mat(outputWidth, outputHeight, cv.CV_8UC3);
         cv.cvtColor(image, output, cv.COLOR_RGBA2RGB);
