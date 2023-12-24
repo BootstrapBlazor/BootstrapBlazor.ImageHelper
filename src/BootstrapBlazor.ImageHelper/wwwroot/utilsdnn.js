@@ -133,7 +133,7 @@
         }
     }
 
-    this.main = async function (mods = ['mobilenet_iter_73000.caffemodel', 'mobilenet_iter_deploy.prototxt'] , color=false) {
+    this.main = async function (mods = ['mobilenet_iter_73000.caffemodel', 'mobilenet_iter_deploy.prototxt'], type = 0) {
         instance.invokeMethodAsync('GetResult', '运行检测中...');
         const labels = await self.loadLables(labelsUrl);
         const input = self.getBlobFromImage(inputSize, mean, std, swapRB, options.imageDataDom);
@@ -147,32 +147,35 @@
         const result = net.forward();
         const time = performance.now() - start;
         let output;
-        if (color) {
-            const colors = generateColors(result);
-            output = argmax(result, colors);
-        } else {
+        if (type == 0) {
             output = self.postProcess(result, labels);
+        } else if (type == 1) {
+            const colors = self.generateColors(result);
+            output = self.argmax(result, colors);
+        } else if (type == 2) {
+            output = self.postProcessPoseEstimation(result);
+        } else if (type == 3) {
+            output = self.postProcessFace(result);
         }
 
-        updateResult(output, time);
+        self.updateResult(output, time);
         input.delete();
         net.delete();
         result.delete();
         instance.invokeMethodAsync('GetResult', '检测完成');
     }
 
-    function updateResult(output, time) {
+    this.updateResult = function (output, time) {
         try {
             let canvasOutput = element.querySelector('#' + options.canvasOutputDom);
             canvasOutput.style.visibility = "visible";
             cv.imshow(options.canvasOutputDom, output);
-            element.querySelector('#' + options.statusDom).innerHTML = `<b>Model:</b> ${modelPath}<br>
-                                                           <b>Inference time:</b> ${time.toFixed(2)} ms`;
+            element.querySelector('#' + options.statusDom).innerHTML = `<b>耗时:</b> ${(time / 1000).toFixed(2)} s`;
         } catch (e) {
             console.log(e);
         }
     }
-    function generateColors (result) {
+    this.generateColors= function (result) {
         const numClasses = result.matSize[1];
         let colors = [0, 0, 0];
         while (colors.length < numClasses * 3) {
@@ -181,7 +184,7 @@
         return colors;
     }
 
-    function argmax (result, colors) {
+    this.argmax = function (result, colors) {
         const C = result.matSize[1];
         const H = result.matSize[2];
         const W = result.matSize[3];
@@ -206,7 +209,7 @@
         return output;
     }
 
-    function initStatus() {
+    this.initStatus = function() {
         element.querySelector('#' + options.statusDom).innerHTML = '';
         element.querySelector('#' + options.canvasOutputDom).style.visibility = "hidden";
         utils.clearError();
@@ -494,4 +497,14 @@
         return output;
     }
 
+    this.postProcessFace = function (result) {
+        let canvasOutput = element.querySelector('#' + options.canvasOutputDom);
+        const outputWidth = canvasOutput.width;
+        const outputHeight = canvasOutput.height;
+
+        let image = cv.imread("imageSrc");
+        let output = new cv.Mat(outputWidth, outputHeight, cv.CV_8UC3);
+        cv.cvtColor(image, output, cv.COLOR_RGBA2RGB);
+        return output;
+    }
 };

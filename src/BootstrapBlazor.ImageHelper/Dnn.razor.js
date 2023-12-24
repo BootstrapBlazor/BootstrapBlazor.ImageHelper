@@ -10,6 +10,7 @@ let utils = null;
 let utilsDnn = null;
 let loadingFace = true;
 let loadingSemanticSegmentation = true;
+let loadingPoseEstimation = true;
 
 export function init(_instance, _element, _options) {
     apply(_instance, _element, _options);
@@ -39,7 +40,7 @@ export function init(_instance, _element, _options) {
     };
 
     addScript(options.openCvUrl).then(
-        async () => {
+        () => {
             instance.invokeMethodAsync('GetReady');
         },
         () => {
@@ -63,8 +64,9 @@ function isLoadImage() {
     return true
 }
 
-export function obj_detection(_instance, _element, _options) {
+export async function obj_detection(_instance, _element, _options) {
     apply(_instance, _element, _options);
+    //ssd
     let mods = [
         "mobilenet_iter_deploy.prototxt",
         "mobilenet_iter_73000.caffemodel"
@@ -101,35 +103,36 @@ export async function semantic_segmentation(_instance, _element, _options) {
         let result = await utils.initModels(mods, baseurl);
         if (result) {
             loadingSemanticSegmentation = false;
-            setTimeout(utilsDnn.main(mods, true), 1);
+            setTimeout(utilsDnn.main(mods, 1), 1);
             instance.invokeMethodAsync('GetResult', '加载模型文件完成');
         } else {
             instance.invokeMethodAsync('GetResult', '加载模型文件失败');
         }
     } else {
-        setTimeout(utilsDnn.main(mods, true), 1);
+        setTimeout(utilsDnn.main(mods, 1), 1);
     }
 }
 
+//899.62秒
 export async function pose_estimation(_instance, _element, _options) {
     apply(_instance, _element, _options);
     let mods = [
         "pose_iter_440000.caffemodel",
         "pose_deploy_linevec.prototxt"
     ];
-    if (loadingFace) {
+    if (loadingPoseEstimation) {
         instance.invokeMethodAsync('GetResult', '正在加载模型文件');
         let baseurl = '_content/BootstrapBlazor.ImageHelper/models/pose_estimation/coco/';
         let result = await utils.initModels(mods, baseurl);
         if (result) {
-            loadingFace = false;
-            setTimeout(utilsDnn.main(mods, true), 1);
+            loadingPoseEstimation = false;
+            setTimeout(utilsDnn.main(mods, 2), 1);
             instance.invokeMethodAsync('GetResult', '加载模型文件完成');
         } else {
             instance.invokeMethodAsync('GetResult', '加载模型文件失败');
         }
     } else {
-        setTimeout(utilsDnn.main(mods, true), 1);
+        setTimeout(utilsDnn.main(mods, 2), 1);
     }
 }
 
@@ -145,13 +148,13 @@ export async function face_detection(_instance, _element, _options) {
         let result = await utils.initModels(mods, baseurl);
         if (result) {
             loadingFace = false;
-            setTimeout(utilsDnn.main(mods, true), 1);
+            setTimeout(utilsDnn.main(mods, 3), 1);
             instance.invokeMethodAsync('GetResult', '加载模型文件完成');
         } else {
             instance.invokeMethodAsync('GetResult', '加载模型文件失败');
         }
     } else {
-        setTimeout(utilsDnn.main(mods, true), 1);
+        setTimeout(utilsDnn.main(mods, 3), 1);
     }
 }
 

@@ -167,6 +167,7 @@ public partial class Dnn : IAsyncDisposable
         }
     }
 
+    //SSD MobileNet
     public virtual async Task ObjDetection()
     {
         if (FirstRender) return;
