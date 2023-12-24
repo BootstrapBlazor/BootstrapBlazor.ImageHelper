@@ -22,6 +22,7 @@ export function apply(_instance, _element, _options) {
     inCanvas.hidden = false;
     videoInput.hidden = true;
 }
+
 export function init(_instance, _element, _options) {
     apply(_instance, _element, _options);
     let inCanvas = element.querySelector('#' + options.imageDataDom);
@@ -49,12 +50,7 @@ export function init(_instance, _element, _options) {
 
     addScript(options.openCvUrl).then(
         () => {
-
-            function onOpenCvReady() {
-                instance.invokeMethodAsync('GetReady');
-            }
-
-            onOpenCvReady();
+            instance.invokeMethodAsync('GetReady');
         },
         () => {
             utils.printError("Failed to load " + options.url);
@@ -167,8 +163,8 @@ export function threshold(_instance, _element, _options) {
     dst.delete()
 }
 
-//人脸检测 
-function faceDetectionBase(_instance, _element, _options, type) {
+//人脸检测
+async function faceDetectionBase(_instance, _element, _options, type) {
     apply(_instance, _element, _options);
     let inCanvas = element.querySelector('#' + options.imageDataDom);
     let videoInput = element.querySelector('#' + options.videoInputDom);
@@ -178,27 +174,32 @@ function faceDetectionBase(_instance, _element, _options, type) {
     if (type != 3 && !isLoadImage()) return false;
     if (loading) {
         let utils = new Utils(instance, element, options);
+        instance.invokeMethodAsync('GetResult', '正在加载模型文件');
         let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
-        let eyeCascadeFile = 'haarcascade_eye.xml';
-        utils.createFileFromUrl(eyeCascadeFile, baseurl + eyeCascadeFile, () => {
-            let faceCascadeFile = 'haarcascade_frontalface_default.xml';
-            utils.createFileFromUrl(faceCascadeFile, baseurl + faceCascadeFile, () => {
-                loading = false;
-                instance.invokeMethodAsync('GetResult', '加载模型文件完成');
-                if (type === 1)
-                    faceDetection(_instance, _element, _options);
-                else if (type === 3)
-                    faceDetectionInCamera(_instance, _element, _options);
-                else
-                    faceDetection1st(_instance, _element, _options);
-            });
-        });
-        return instance.invokeMethodAsync('GetResult', '正在加载模型文件');
+        let mods = [
+            "haarcascade_eye.xml",
+            "haarcascade_frontalface_default.xml" 
+        ];
+        let result = await utils.initModels(mods, baseurl);
+        if (result) {
+            loading = false;
+            instance.invokeMethodAsync('GetResult', '加载模型文件完成');
+            if (type === 1)
+                faceDetection(_instance, _element, _options);
+            else if (type === 3)
+                faceDetectionInCamera(_instance, _element, _options);
+            else
+                faceDetection1st(_instance, _element, _options);
+        } else {
+            instance.invokeMethodAsync('GetResult', '加载模型文件失败');
+        }        
+        return false;
     }
     return true;
 }
-export function faceDetection(_instance, _element, _options) {
-    if (!faceDetectionBase(_instance, _element, _options, 1)) return;
+
+export async function faceDetection(_instance, _element, _options) {
+    if (!(await faceDetectionBase(_instance, _element, _options, 1))) return;
     let imageData = element.querySelector('#' + options.imageDataDom);
     let src = cv.imread(imageData);
     let gray = new cv.Mat();
@@ -220,7 +221,7 @@ export function faceDetection(_instance, _element, _options) {
         let point1 = new cv.Point(faces.get(i).x, faces.get(i).y);
         let point2 = new cv.Point(faces.get(i).x + faces.get(i).width,
             faces.get(i).y + faces.get(i).height);
-        cv.rectangle(src, point1, point2, [255, 0, 0, 255]);
+        cv.rectangle(src, point1, point2, [255, 0, 0, 255], 2);
         // detect eyes in face ROI
         eyeCascade.detectMultiScale(roiGray, eyes);
         for (let j = 0; j < eyes.size(); ++j) {
@@ -236,8 +237,8 @@ export function faceDetection(_instance, _element, _options) {
     eyeCascade.delete(); faces.delete(); eyes.delete();
 }
 
-export function faceDetection1st(_instance, _element, _options) {
-    if (!faceDetectionBase(_instance, _element, _options, 2)) return;
+export async function faceDetection1st(_instance, _element, _options) {
+    if (!(await faceDetectionBase(_instance, _element, _options, 2))) return; 
     let imageData = element.querySelector('#' + options.imageDataDom);
     let src = cv.imread(imageData);
     let gray = new cv.Mat();
@@ -401,8 +402,8 @@ export function faceDetection1st(_instance, _element, _options) {
 //    dst.delete()
 //}
 
-export function faceDetectionInCamera(_instance, _element, _options) {
-    if (!faceDetectionBase(_instance, _element, _options, 3)) return;
+export async function faceDetectionInCamera(_instance, _element, _options) {
+    if (!(await faceDetectionBase(_instance, _element, _options, 3))) return;
     let utils = new Utils(instance, element, options);
 
     let streaming = false;
@@ -454,7 +455,7 @@ export function faceDetectionInCamera(_instance, _element, _options) {
                 let face = faces.get(i);
                 let point1 = new cv.Point(face.x, face.y);
                 let point2 = new cv.Point(face.x + face.width, face.y + face.height);
-                cv.rectangle(dst, point1, point2, [255, 0, 0, 255]);
+                cv.rectangle(dst, point1, point2, [255, 0, 0, 255], 2);
             }
             cv.imshow(options.canvasOutputDom, dst);
             // schedule the next one.

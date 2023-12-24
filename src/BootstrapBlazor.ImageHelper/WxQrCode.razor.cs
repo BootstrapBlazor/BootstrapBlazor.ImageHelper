@@ -6,11 +6,8 @@
 
 using BootstrapBlazor.ImageHelper;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Http;
 
 namespace BootstrapBlazor.Components;
 
@@ -63,6 +60,9 @@ public partial class WxQrCode : IAsyncDisposable
     /// </summary>
     [Parameter]
     public WxQrCodeOption Options { get; set; }=new();
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -148,13 +148,29 @@ public partial class WxQrCode : IAsyncDisposable
         return IsOpenCVReady;
     }     
 
-    public virtual async Task Apply()
+    public virtual async Task Decode()
     {
         if (FirstRender) return;
         Message =string.Empty;
         try
         {
             await Module!.InvokeVoidAsync("wechatQrcode452", Instance, Element, Options);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            StateHasChanged();
+            System.Console.WriteLine(ex.Message);
+        }
+    }
+
+    public virtual async Task Apply()
+    {
+        if (FirstRender) return;
+        Message =string.Empty;
+        try
+        {
+            await Module!.InvokeVoidAsync("apply", Instance, Element, Options);
         }
         catch (Exception ex)
         {

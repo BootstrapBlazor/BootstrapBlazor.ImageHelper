@@ -59,6 +59,9 @@ public partial class ImageHelper : IAsyncDisposable
     [Parameter]
     public ImageHelperOption Options { get; set; } = new();
 
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try

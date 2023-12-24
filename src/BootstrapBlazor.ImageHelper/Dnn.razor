@@ -5,7 +5,7 @@
     <pre> @Status</pre>
     <pre> @Message</pre>
     <pre id="@Options.ErrorOutputDom"></pre>
-    <p id="status" align="left"> 
+    <p id="@Options.StatusDom" align="left"> 
     </p>
     <div class="row g-3">
         <div>
@@ -14,9 +14,19 @@
             &nbsp;
             @if (IsOpenCVReady)
             {
-                <Button Text="重试" OnClickWithoutRender="Apply" />
-                <Button Text="摄像头" OnClickWithoutRender="Camera" />
-                <Button Id="@Options.StartAndStopDom" Text="" />
+                if (ChildContent != null)
+                {
+                    @ChildContent
+                }
+                else
+                {
+                    <Button Text="检测物体" OnClickWithoutRender="ObjDetection" /> 
+                    @*<Button Text="摄像头" OnClickWithoutRender="Camera" IsDisabled="@IsCameraBusy" />*@
+                    <Button Id="@Options.StartAndStopDom" Text="无" IsDisabled="@(!IsCameraBusy)" />
+                    <Button Text="人脸识别" OnClickWithoutRender="FaceDetection" />
+                    <Button Text="运动检测" OnClickWithoutRender="PoseEstimation" />
+                    <Button Text="语义分割" OnClickWithoutRender="SemanticSegmentation" />
+                }
             }
         </div>
         <div class="inputoutput col-12 col-sm-6">

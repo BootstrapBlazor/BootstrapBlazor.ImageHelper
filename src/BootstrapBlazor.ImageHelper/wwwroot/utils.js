@@ -62,7 +62,8 @@ export function Utils(instance, element, options) { // eslint-disable-line no-un
     this.initModels = async function (paths, baseurl) {
         let result = false;
         await Promise.all(paths.map(async (path) => {
-            let url = baseurl + path + '.txt';
+            let url = baseurl + path
+            if (!path.endsWith('.xml')) url = url + '.txt';
             let res = await self.createFileFromUrlRequest(path, url);
             result = res;
         }));

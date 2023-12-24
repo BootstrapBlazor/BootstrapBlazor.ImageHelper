@@ -1,6 +1,6 @@
 ﻿import { vibrate, addScript, Utils } from '/_content/BootstrapBlazor.ImageHelper/utils.js'
 
-let loadingQr = true;
+let loading = true;
 let img = new Image();
 let qrcode_detector;
 let element = null;
@@ -8,9 +8,7 @@ let instance = null;
 let options = null;
 
 export function init(_instance, _element, _options) {
-    options = _options;
-    instance = _instance;
-    element = _element;
+    apply(_instance, _element, _options);
     let inputElement = element.querySelector('#' + options.fileInputDom);
     let captureElement = element.querySelector('#' + options.captureDom);
     let canvasOutput = element.querySelector('#' + _options.imageDataDom);
@@ -35,9 +33,10 @@ export function init(_instance, _element, _options) {
 
     addScript(options.openCvUrl).then(
         async () => {
-            if (loadingQr) {
+            instance.invokeMethodAsync('GetReady'); 
+            if (loading) {
                 instance.invokeMethodAsync('GetResult', '正在加载模型文件');
-                let baseurl = '_content/BootstrapBlazor.ImageHelper/models/';
+                let baseurl = '_content/BootstrapBlazor.ImageHelper/models/wxqrcode/';
                 let mods = [
                     "detect.prototxt",
                     "detect.caffemodel",
@@ -46,7 +45,7 @@ export function init(_instance, _element, _options) {
                 ];
                 let result = await utils.initModels(mods, baseurl);
                 if (result) {
-                    loadingQr = false;
+                    loading = false;
                     qrcode_detector = new cv.wechat_qrcode_WeChatQRCode(
                         "detect.prototxt",
                         "detect.caffemodel",
@@ -58,18 +57,18 @@ export function init(_instance, _element, _options) {
                     instance.invokeMethodAsync('GetResult', '加载模型文件失败');
                 }
             }
-
-            function onOpenCvReady() {
-                instance.invokeMethodAsync('GetReady');
-            }
-
-            onOpenCvReady();
         },
         () => {
             utils.printError("Failed to load " + options.url);
         }
     );
 
+}
+
+export function apply(_instance, _element, _options) {
+    options = _options;
+    instance = _instance;
+    element = _element; 
 }
 
 function cutImage(src, dst, width = 600) {
@@ -99,9 +98,9 @@ function isLoadImage() {
     return true
 }
 
-export function wechatQrcode452(instance, element, _options) {
+export function wechatQrcode452(_instance, _element, _options) {
     if (!isLoadImage()) return;
-    options = _options;
+    apply(_instance, _element, _options);
     let imageData = element.querySelector('#' + _options.imageDataDom);
     let inputImage = cv.imread(imageData, cv.IMREAD_GRAYSCALE);
     detectAndDecode(instance, inputImage, _options);
@@ -159,8 +158,8 @@ export function detectAndDecode(instance, inputImage, _options, retry = true, to
 }
 
 
-export function wechatQrcodeCamera(instance, element, _options) {
-    options = _options;
+export function wechatQrcodeCamera(_instance, _element, _options) {
+    apply(_instance, _element, _options);
     let utils = new Utils(instance, element, _options);
 
     let streaming = false;

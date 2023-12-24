@@ -23,5 +23,6 @@ public class ImageHelperOption : ImageHelperOptionBase
     public EnumImageHelperFunc Type { get; set; }
 
     public string CanvasOutputDom { get; set; } = "canvasOutput";
+    public string StatusDom { get; set; } = "status";
 
 }

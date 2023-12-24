@@ -25,7 +25,7 @@ public partial class Dnn : IAsyncDisposable
 
     [Inject]
     [NotNull]
-    private HttpClient? HttpClient  { get; set; }
+    private HttpClient? HttpClient { get; set; }
 
     private IJSObjectReference? Module { get; set; }
 
@@ -34,7 +34,7 @@ public partial class Dnn : IAsyncDisposable
     /// <summary>
     /// UI界面元素的引用对象
     /// </summary>
-    public ElementReference Element { get; set; } 
+    public ElementReference Element { get; set; }
 
     /// <summary>
     /// 消息回调方法/ message callback method
@@ -49,8 +49,9 @@ public partial class Dnn : IAsyncDisposable
     public Func<string, Task>? OnError { get; set; }
 
     private bool IsOpenCVReady { get; set; }
-    private string Status => IsOpenCVReady ? "初始化完成" : "正在初始化...";
-    private string? Message { get; set; } 
+    private bool IsCameraBusy { get; set; }
+    private string Status => IsCameraBusy ? "正在使用摄像头" : IsOpenCVReady ? "初始化完成" : "正在初始化...";
+    private string? Message { get; set; }
 
     private bool FirstRender { get; set; } = true;
 
@@ -61,7 +62,10 @@ public partial class Dnn : IAsyncDisposable
     /// 选项
     /// </summary>
     [Parameter]
-    public ImageHelperOption Options { get; set; }=new();
+    public ImageHelperOption Options { get; set; } = new();
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -85,7 +89,7 @@ public partial class Dnn : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Message=e.Message;
+            Message = e.Message;
             StateHasChanged();
             if (OnError != null) await OnError.Invoke(e.Message);
         }
@@ -104,7 +108,16 @@ public partial class Dnn : IAsyncDisposable
         IsOpenCVReady = true;
         StateHasChanged();
         if (OnResult != null)
-            await OnResult.Invoke(Status); 
+            await OnResult.Invoke(Status);
+    }
+
+    [JSInvokable]
+    public async Task GetCameraBusy(bool busy)
+    {
+        IsCameraBusy = busy;
+        StateHasChanged();
+        if (OnResult != null)
+            await OnResult.Invoke(Status);
     }
 
     [JSInvokable]
@@ -136,12 +149,28 @@ public partial class Dnn : IAsyncDisposable
             System.Console.WriteLine(ex.Message);
         }
         return IsOpenCVReady;
-    }     
+    }
 
     public virtual async Task Apply()
     {
         if (FirstRender) return;
-        Message =string.Empty;
+        Message = string.Empty;
+        try
+        {
+            await Module!.InvokeVoidAsync("apply", Instance, Element, Options);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            StateHasChanged();
+            System.Console.WriteLine(ex.Message);
+        }
+    }
+
+    public virtual async Task ObjDetection()
+    {
+        if (FirstRender) return;
+        Message = string.Empty;
         try
         {
             await Module!.InvokeVoidAsync("obj_detection", Instance, Element, Options);
@@ -157,7 +186,7 @@ public partial class Dnn : IAsyncDisposable
     public virtual async Task Camera()
     {
         if (FirstRender) return;
-        Message =string.Empty;
+        Message = string.Empty;
         try
         {
             await Module!.InvokeVoidAsync("obj_detection_camera", Instance, Element, Options);
@@ -168,7 +197,55 @@ public partial class Dnn : IAsyncDisposable
             StateHasChanged();
             System.Console.WriteLine(ex.Message);
         }
-    } 
+    }
+
+    public virtual async Task FaceDetection()
+    {
+        if (FirstRender) return;
+        Message = string.Empty;
+        try
+        {
+            await Module!.InvokeVoidAsync("face_detection", Instance, Element, Options);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            StateHasChanged();
+            System.Console.WriteLine(ex.Message);
+        }
+    }
+
+    public virtual async Task SemanticSegmentation()
+    {
+        if (FirstRender) return;
+        Message = string.Empty;
+        try
+        {
+            await Module!.InvokeVoidAsync("semantic_segmentation", Instance, Element, Options);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            StateHasChanged();
+            System.Console.WriteLine(ex.Message);
+        }
+    }
+
+    public virtual async Task PoseEstimation()
+    {
+        if (FirstRender) return;
+        Message = string.Empty;
+        try
+        {
+            await Module!.InvokeVoidAsync("pose_estimation", Instance, Element, Options);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            StateHasChanged();
+            System.Console.WriteLine(ex.Message);
+        }
+    }
 
     [JSInvokable]
     public async Task GetResult(string msg)
@@ -207,6 +284,6 @@ public partial class Dnn : IAsyncDisposable
             await Module.DisposeAsync();
         }
         Instance?.Dispose();
-    } 
+    }
 
 }

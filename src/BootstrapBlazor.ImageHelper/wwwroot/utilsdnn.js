@@ -1,4 +1,4 @@
-﻿export function UtilsDnn(instance, element, options, modelPath = 'mobilenet_iter_73000.caffemodel', configPath = 'mobilenet_iter_deploy.prototxt') { // eslint-disable-line no-unused-vars
+﻿export function UtilsDnn(instance, element, options) { // eslint-disable-line no-unused-vars
     let self = this;
 
     const inputSize = [300, 300];
@@ -12,7 +12,7 @@
     const outType = "SSD";
 
     // url for label file, can from local or Internet 标签文件的 url，可以来自本地或互联网
-    const labelsUrl = "https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/dnn/object_detection_classes_pascal_voc.txt";
+    const labelsUrl = "_content/BootstrapBlazor.ImageHelper/models/obj_detection/object_detection_classes_pascal_voc.txt";
 
     this.getBlobFromImage = function (inputSize, mean, std, swapRB, image) {
         let mat;
@@ -77,7 +77,7 @@
         return classes;
     }
 
-    this.loadImageToCanvas = function (e, canvasId,callback) {
+    this.loadImageToCanvas = function (e, canvasId, callback) {
         let files = e.target.files;
         let imgUrl = URL.createObjectURL(files[0]);
         let canvas = element.querySelector('#' + canvasId);
@@ -133,42 +133,87 @@
         }
     }
 
-    this.main = async function () {
+    this.main = async function (mods = ['mobilenet_iter_73000.caffemodel', 'mobilenet_iter_deploy.prototxt'] , color=false) {
+        instance.invokeMethodAsync('GetResult', '运行检测中...');
         const labels = await self.loadLables(labelsUrl);
-        const input = self.getBlobFromImage(inputSize, mean, std, swapRB, 'imageSrc');
-        let net = cv.readNet(configPath, modelPath);
+        const input = self.getBlobFromImage(inputSize, mean, std, swapRB, options.imageDataDom);
+        let configPath = "";
+        if (mods.length === 2) {
+            configPath = mods[1];
+        }
+        let net = cv.readNet(configPath, mods[0]);
         net.setInput(input);
         const start = performance.now();
         const result = net.forward();
         const time = performance.now() - start;
-        const output = self.postProcess(result, labels);
+        let output;
+        if (color) {
+            const colors = generateColors(result);
+            output = argmax(result, colors);
+        } else {
+            output = self.postProcess(result, labels);
+        }
 
         updateResult(output, time);
         input.delete();
         net.delete();
         result.delete();
+        instance.invokeMethodAsync('GetResult', '检测完成');
     }
 
     function updateResult(output, time) {
         try {
-            let canvasOutput = element.querySelector('#' + 'canvasOutput');
+            let canvasOutput = element.querySelector('#' + options.canvasOutputDom);
             canvasOutput.style.visibility = "visible";
-            cv.imshow('canvasOutput', output);
-            element.querySelector('#' + 'status').innerHTML = `<b>Model:</b> ${modelPath}<br>
+            cv.imshow(options.canvasOutputDom, output);
+            element.querySelector('#' + options.statusDom).innerHTML = `<b>Model:</b> ${modelPath}<br>
                                                            <b>Inference time:</b> ${time.toFixed(2)} ms`;
         } catch (e) {
             console.log(e);
         }
     }
+    function generateColors (result) {
+        const numClasses = result.matSize[1];
+        let colors = [0, 0, 0];
+        while (colors.length < numClasses * 3) {
+            colors.push(Math.round((Math.random() * 255 + colors[colors.length - 3]) / 2));
+        }
+        return colors;
+    }
+
+    function argmax (result, colors) {
+        const C = result.matSize[1];
+        const H = result.matSize[2];
+        const W = result.matSize[3];
+        const resultData = result.data32F;
+        const imgSize = H * W;
+
+        let classId = [];
+        for (i = 0; i < imgSize; ++i) {
+            let id = 0;
+            for (j = 0; j < C; ++j) {
+                if (resultData[j * imgSize + i] > resultData[id * imgSize + i]) {
+                    id = j;
+                }
+            }
+            classId.push(colors[id * 3]);
+            classId.push(colors[id * 3 + 1]);
+            classId.push(colors[id * 3 + 2]);
+            classId.push(255);
+        }
+
+        output = cv.matFromArray(H, W, cv.CV_8UC4, classId);
+        return output;
+    }
 
     function initStatus() {
-        element.querySelector('#' + 'status').innerHTML = '';
-        element.querySelector('#' + 'canvasOutput').style.visibility = "hidden";
+        element.querySelector('#' + options.statusDom).innerHTML = '';
+        element.querySelector('#' + options.canvasOutputDom).style.visibility = "hidden";
         utils.clearError();
     }
 
     this.postProcess = function (result, labels) {
-        let canvasOutput = element.querySelector('#' + 'canvasOutput');
+        let canvasOutput = element.querySelector('#' + options.canvasOutputDom);
         const outputWidth = canvasOutput.width;
         const outputHeight = canvasOutput.height;
         const resultData = result.data32F;
@@ -334,5 +379,119 @@
         }
     }
 
+    let BODY_PARTS = {};
+    let POSE_PAIRS = [];
+    this.postProcessPoseEstimation = function (result) {
+
+        if (dataset === 'COCO') {
+            BODY_PARTS = {
+                "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+                "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
+                "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "REye": 14,
+                "LEye": 15, "REar": 16, "LEar": 17, "Background": 18
+            };
+
+            POSE_PAIRS = [["Neck", "RShoulder"], ["Neck", "LShoulder"], ["RShoulder", "RElbow"],
+            ["RElbow", "RWrist"], ["LShoulder", "LElbow"], ["LElbow", "LWrist"],
+            ["Neck", "RHip"], ["RHip", "RKnee"], ["RKnee", "RAnkle"], ["Neck", "LHip"],
+            ["LHip", "LKnee"], ["LKnee", "LAnkle"], ["Neck", "Nose"], ["Nose", "REye"],
+            ["REye", "REar"], ["Nose", "LEye"], ["LEye", "LEar"]]
+        } else if (dataset === 'MPI') {
+            BODY_PARTS = {
+                "Head": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+                "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
+                "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "Chest": 14,
+                "Background": 15
+            }
+
+            POSE_PAIRS = [["Head", "Neck"], ["Neck", "RShoulder"], ["RShoulder", "RElbow"],
+            ["RElbow", "RWrist"], ["Neck", "LShoulder"], ["LShoulder", "LElbow"],
+            ["LElbow", "LWrist"], ["Neck", "Chest"], ["Chest", "RHip"], ["RHip", "RKnee"],
+            ["RKnee", "RAnkle"], ["Chest", "LHip"], ["LHip", "LKnee"], ["LKnee", "LAnkle"]]
+        } else if (dataset === 'BODY_25') {
+            BODY_PARTS = {
+                "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+                "LShoulder": 5, "LElbow": 6, "LWrist": 7, "MidHip": 8, "RHip": 9,
+                "RKnee": 10, "RAnkle": 11, "LHip": 12, "LKnee": 13, "LAnkle": 14,
+                "REye": 15, "LEye": 16, "REar": 17, "LEar": 18, "LBigToe": 19,
+                "LSmallToe": 20, "LHeel": 21, "RBigToe": 22, "RSmallToe": 23,
+                "RHeel": 24, "Background": 25
+            }
+
+            POSE_PAIRS = [["Neck", "Nose"], ["Neck", "RShoulder"],
+            ["Neck", "LShoulder"], ["RShoulder", "RElbow"],
+            ["RElbow", "RWrist"], ["LShoulder", "LElbow"],
+            ["LElbow", "LWrist"], ["Nose", "REye"],
+            ["REye", "REar"], ["Nose", "LEye"],
+            ["LEye", "LEar"], ["Neck", "MidHip"],
+            ["MidHip", "RHip"], ["RHip", "RKnee"],
+            ["RKnee", "RAnkle"], ["RAnkle", "RBigToe"],
+            ["RBigToe", "RSmallToe"], ["RAnkle", "RHeel"],
+            ["MidHip", "LHip"], ["LHip", "LKnee"],
+            ["LKnee", "LAnkle"], ["LAnkle", "LBigToe"],
+            ["LBigToe", "LSmallToe"], ["LAnkle", "LHeel"]]
+        }
+
+        const resultData = result.data32F;
+        const matSize = result.matSize;
+        const size1 = matSize[1];
+        const size2 = matSize[2];
+        const size3 = matSize[3];
+        const mapSize = size2 * size3;
+
+        let canvasOutput = element.querySelector('#' + options.canvasOutputDom);
+        const outputWidth = canvasOutput.width;
+        const outputHeight = canvasOutput.height;
+
+        let image = cv.imread("imageSrc");
+        let output = new cv.Mat(outputWidth, outputHeight, cv.CV_8UC3);
+        cv.cvtColor(image, output, cv.COLOR_RGBA2RGB);
+
+        // get position of keypoints from output
+        let points = [];
+        for (let i = 0; i < Object.keys(BODY_PARTS).length; ++i) {
+            heatMap = resultData.slice(i * mapSize, (i + 1) * mapSize);
+
+            let maxIndex = 0;
+            let maxConf = heatMap[0];
+            for (index in heatMap) {
+                if (heatMap[index] > heatMap[maxIndex]) {
+                    maxIndex = index;
+                    maxConf = heatMap[index];
+                }
+            }
+
+            if (maxConf > threshold) {
+                indexX = maxIndex % size3;
+                indexY = maxIndex / size3;
+
+                x = outputWidth * indexX / size3;
+                y = outputHeight * indexY / size2;
+
+                points[i] = [Math.round(x), Math.round(y)];
+            }
+        }
+
+        // draw the points and lines into the image
+        for (pair of POSE_PAIRS) {
+            partFrom = pair[0];
+            partTo = pair[1];
+            idFrom = BODY_PARTS[partFrom];
+            idTo = BODY_PARTS[partTo];
+            pointFrom = points[idFrom];
+            pointTo = points[idTo];
+
+            if (points[idFrom] && points[idTo]) {
+                cv.line(output, new cv.Point(pointFrom[0], pointFrom[1]),
+                    new cv.Point(pointTo[0], pointTo[1]), new cv.Scalar(0, 255, 0), 3);
+                cv.ellipse(output, new cv.Point(pointFrom[0], pointFrom[1]), new cv.Size(3, 3), 0, 0, 360,
+                    new cv.Scalar(0, 0, 255), cv.FILLED);
+                cv.ellipse(output, new cv.Point(pointTo[0], pointTo[1]), new cv.Size(3, 3), 0, 0, 360,
+                    new cv.Scalar(0, 0, 255), cv.FILLED);
+            }
+        }
+
+        return output;
+    }
 
 };

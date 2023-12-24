@@ -353,3 +353,8 @@ src/BootstrapBlazor.ImageHelper/wwwroot/qr/utils.js
 /src/BootstrapBlazor.ImageHelper/wwwroot/qr/wasm.js
 /src/BootstrapBlazor.ImageHelper/wwwroot/qr/opencv455-shell.js
 /src/BootstrapBlazor.ImageHelper/wwwroot/qr/opencv.js
+/src/BootstrapBlazor.ImageHelper/wwwroot/models/pose_estimation/pose_iter_440000.caffemodel.txt
+/src/BootstrapBlazor.ImageHelper/wwwroot/models/ssd/mobilenet_iter_73000.caffemodel.txt
+/src/BootstrapBlazor.ImageHelper/wwwroot/models/pose_estimation/coco/pose_iter_440000.caffemodel.txt
+/src/BootstrapBlazor.ImageHelper/wwwroot/models/pose_estimation/mpi/pose_iter_160000.caffemodel.txt
+/src/BootstrapBlazor.ImageHelper/wwwroot/models/image_classification/bvlc_alexnet.caffemodel.txt
