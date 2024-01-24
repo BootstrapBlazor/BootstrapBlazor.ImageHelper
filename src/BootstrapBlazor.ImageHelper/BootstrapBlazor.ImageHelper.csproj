@@ -32,6 +32,18 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Content Remove="wwwroot\models\image_classification\bvlc_alexnet.caffemodel.txt" />
+      <Content Remove="wwwroot\models\pose_estimation\coco\pose_iter_440000.caffemodel.txt" />
+      <Content Remove="wwwroot\models\pose_estimation\mpi\pose_iter_160000.caffemodel.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="wwwroot\models\image_classification\bvlc_alexnet.caffemodel.txt" />
+      <None Include="wwwroot\models\pose_estimation\coco\pose_iter_440000.caffemodel.txt" />
+      <None Include="wwwroot\models\pose_estimation\mpi\pose_iter_160000.caffemodel.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="BootstrapBlazor" Version="*" />
     </ItemGroup>
     
